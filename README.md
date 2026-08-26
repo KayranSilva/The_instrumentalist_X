@@ -8,10 +8,9 @@ O projeto une processamento de sinais digitais, machine learning e teoria musica
 
 ## 📌 Sobre o Projeto
 
-A música desempenha um papel essencial no bem-estar humano, melhorando o humor, reduzindo o estresse, aumentando a concentração e promovendo conexão social. Pensando nisso, o **The Instrumentalist X** nasceu para democratizar o aprendizado musical, tornando a análise e transcrição de áudio acessível através de IA.
+A música desempenha um papel essencial no bem-estar humano, melhorando o humor, reduzindo o estresse, aumentando a concentração e promovendo conexão social. Pensando nisso, o **The Instrumentalist X** nasceu para democratizar o aprendizado musical, tornando a análise e transcrição de áudio acessível.
 
 ### Proposta de Valor
-- Análise e transcrição musical automática via IA
 - Organização do conteúdo em tablatura, partitura e cifras para diversos instrumentos
 - Auxílio interativo ao aprendizado musical
 
@@ -46,7 +45,6 @@ A música desempenha um papel essencial no bem-estar humano, melhorando o humor,
 
 | Item | Percentual | Valor |
 |---|---|---|
-| Desenvolvimento da IA e interface | 64,1% | US$ 500.000 |
 | Marketing e divulgação | 25,64% | US$ 200.000 |
 | Criação de conteúdos educacionais | 6,41% | US$ 50.000 |
 | Manutenção mensal | 3,84% | US$ 30.000/mês |
@@ -75,7 +73,7 @@ A música desempenha um papel essencial no bem-estar humano, melhorando o humor,
 
 ## 👥 Equipe
 
-**Desenvolvimento de IA e Processamento de Áudio**
+**Processamento de Áudio**
 - Engenheiros de Machine Learning
 - Especialistas em Processamento de Sinais
 - Engenheiros de Software
@@ -124,5 +122,3 @@ A música desempenha um papel essencial no bem-estar humano, melhorando o humor,
 - Maria Luiza Pinheiro Higashi
 - João Gabriel Lustosa Novaes Gomes
 - Kayran Marcos Silva Galdino
-
-*Projeto desenvolvido por Lobo Ltda.*
