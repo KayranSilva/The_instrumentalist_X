@@ -1,6 +1,6 @@
-# The Instrumentalist X 🎸🎹🎻
+# The Instrumentalist  🎸🎹🎻
 
-**The Instrumentalist X** é uma plataforma de tecnologia musical utilizada para transcrever automaticamente áudios em partituras, tablaturas e cifras para diversos instrumentos, além de oferecer orientação interativa e personalizada para o aprendizado musical.
+**The Instrumentalist ** é uma plataforma de tecnologia musical utilizada para transcrever automaticamente áudios em partituras, tablaturas e cifras para diversos instrumentos, além de oferecer orientação interativa e personalizada para o aprendizado musical.
 
 O projeto une processamento de sinais digitais, machine learning e teoria musical para atender tanto iniciantes quanto músicos profissionais.
 
@@ -8,7 +8,7 @@ O projeto une processamento de sinais digitais, machine learning e teoria musica
 
 ## 📌 Sobre o Projeto
 
-A música desempenha um papel essencial no bem-estar humano, melhorando o humor, reduzindo o estresse, aumentando a concentração e promovendo conexão social. Pensando nisso, o **The Instrumentalist X** nasceu para democratizar o aprendizado musical, tornando a análise e transcrição de áudio acessível.
+A música desempenha um papel essencial no bem-estar humano, melhorando o humor, reduzindo o estresse, aumentando a concentração e promovendo conexão social. Pensando nisso, o **The Instrumentalist ** nasceu para democratizar o aprendizado musical, tornando a análise e transcrição de áudio acessível.
 
 ### Proposta de Valor
 - Organização do conteúdo em tablatura, partitura e cifras para diversos instrumentos
