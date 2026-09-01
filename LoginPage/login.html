@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Instrumentalist — Entrar na sua conta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ============ LEFT: brand / illustration stage ============ -->
+  <section class="stage">
+    <div class="brand">
+      <div class="brand-mark">I</div>
+      <span class="brand-name">The Instrumentalist</span>
+    </div>
+
+    <div class="stage-copy">
+      <span class="kicker">Bem-vindo de volta</span>
+      <h1>Seus projetos continuam de onde você parou.</h1>
+      <p>Organize tarefas, acompanhe prazos e colabore com o seu time em um único lugar, feito para o seu ritmo de trabalho.</p>
+    </div>
+
+    <div class="stage-figure" aria-hidden="true">
+      <img src="music.png" alt="Ilustração de música">
+    </div>
+
+    <div class="stage-stats">
+      <div class="stat"><b>12k+</b><span>equipes ativas</span></div>
+      <div class="stat"><b>98%</b><span>satisfação</span></div>
+      <div class="stat"><b>24/7</b><span>suporte real</span></div>
+    </div>
+  </section>
+
+  <!-- ============ RIGHT: login form ============ -->
+  <section class="panel">
+    <div class="form-wrap">
+
+      <div class="form-head">
+        <h2>Entrar na conta</h2>
+        <p>Informe seus dados para acessar o painel.</p>
+      </div>
+
+      <form id="loginForm" novalidate>
+
+        <div class="field">
+          <label for="email">E-mail</label>
+          <div class="input-shell">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h15A1.5 1.5 0 0 1 21 6.5v11a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-11Z"/><path d="M4 6.5 12 13l8-6.5"/></svg>
+            <input type="email" id="email" name="email" placeholder="voce@empresa.com" autocomplete="email" required>
+          </div>
+          <span class="field-error" id="emailError"></span>
+        </div>
+
+        <div class="field">
+          <label for="password">Senha</label>
+          <div class="input-shell">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg>
+            <input type="password" id="password" name="password" placeholder="Digite sua senha" autocomplete="current-password" required minlength="6">
+            <button type="button" class="toggle-visibility" id="togglePassword" aria-label="Mostrar senha" aria-pressed="false">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <span class="field-error" id="passwordError"></span>
+        </div>
+
+        <div class="row-between">
+          <label class="remember">
+            <input type="checkbox" id="remember" name="remember">
+            Lembrar de mim
+          </label>
+          <button type="button" class="link-btn" id="forgotPasswordBtn">Esqueci minha senha</button>
+        </div>
+
+        <button type="submit" class="btn-primary">Entrar</button>
+      </form>
+
+      <p class="signup-hint">
+        Ainda não tem conta? <button type="button" class="link-btn" id="signupBtn">Criar conta gratuita</button>
+      </p>
+
+      <p class="signup-hint" style="margin-top:6px;">
+        Esqueceu qual e-mail usou? <button type="button" class="link-btn" id="forgotLoginBtn">Recuperar meu login</button>
+      </p>
+
+    </div>
+  </section>
+
+</div>
+
+<!-- ============ Modal: forgot password / login ============ -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-head">
+      <h3 id="modalTitle">Recuperar acesso</h3>
+      <button class="modal-close" id="modalClose" aria-label="Fechar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <p class="sub" id="modalSub">Informe o e-mail associado à sua conta e enviaremos um link para redefinir sua senha.</p>
+
+    <form id="recoveryForm">
+      <div class="field">
+        <label for="recoveryEmail" class="visually-hidden">E-mail para recuperação</label>
+        <div class="input-shell">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h15A1.5 1.5 0 0 1 21 6.5v11a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-11Z"/><path d="M4 6.5 12 13l8-6.5"/></svg>
+          <input type="email" id="recoveryEmail" placeholder="voce@empresa.com" required>
+        </div>
+        <span class="field-error" id="recoveryError"></span>
+      </div>
+      <button type="submit" class="btn-primary">Enviar link de recuperação</button>
+    </form>
+
+    <div class="modal-feedback" id="modalFeedback">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#276a3b" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+      <span>Se o e-mail existir em nossa base, você receberá as instruções em instantes.</span>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
