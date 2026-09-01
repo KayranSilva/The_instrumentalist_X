@@ -1,18 +1,20 @@
 (function(){
   "use strict";
 
-  // ---------- Password visibility toggle ----------
+  var API_URL = 'http://127.0.0.1:8001';
+
   var toggleBtn = document.getElementById('togglePassword');
   var passwordInput = document.getElementById('password');
 
-  toggleBtn.addEventListener('click', function(){
-    var isPassword = passwordInput.type === 'password';
-    passwordInput.type = isPassword ? 'text' : 'password';
-    toggleBtn.setAttribute('aria-pressed', String(isPassword));
-    toggleBtn.setAttribute('aria-label', isPassword ? 'Ocultar senha' : 'Mostrar senha');
-  });
+  if(toggleBtn && passwordInput){
+    toggleBtn.addEventListener('click', function(){
+      var isPassword = passwordInput.type === 'password';
+      passwordInput.type = isPassword ? 'text' : 'password';
+      toggleBtn.setAttribute('aria-pressed', String(isPassword));
+      toggleBtn.setAttribute('aria-label', isPassword ? 'Ocultar senha' : 'Mostrar senha');
+    });
+  }
 
-  // ---------- Login form validation ----------
   var loginForm = document.getElementById('loginForm');
   var emailInput = document.getElementById('email');
   var emailError = document.getElementById('emailError');
@@ -22,8 +24,8 @@
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
   }
 
-  loginForm.addEventListener('submit', function(e){
-    e.preventDefault();
+  async function submitLogin(event){
+    event.preventDefault();
     var valid = true;
 
     emailError.textContent = '';
@@ -47,15 +49,41 @@
 
     if(!valid) return;
 
-    // Ponto de integração: substitua pelo fetch() para sua API de autenticação.
-    console.log('Login enviado:', {
-      email: emailInput.value.trim(),
-      remember: document.getElementById('remember').checked
-    });
-    alert('Login enviado! Conecte esta ação à sua API de autenticação.');
-  });
+    try {
+      var response = await fetch(API_URL + '/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          email: emailInput.value.trim(),
+          password: passwordInput.value,
+          remember: document.getElementById('remember').checked
+        })
+      });
 
-  // ---------- Modal (forgot password / login) ----------
+      var data = await response.json();
+
+      if(response.ok && data.success){
+        window.location.href = 'home.html';
+        return;
+      }
+
+      if(data.message){
+        if(data.message.toLowerCase().includes('e-mail') || data.message.toLowerCase().includes('inválido')){
+          emailError.textContent = data.message;
+        } else {
+          passwordError.textContent = data.message;
+        }
+      }
+    } catch (error) {
+      passwordError.textContent = 'Não foi possível conectar ao servidor de login.';
+      console.error(error);
+    }
+  }
+
+  if(loginForm){
+    loginForm.addEventListener('submit', submitLogin);
+  }
+
   var overlay = document.getElementById('modalOverlay');
   var modalTitle = document.getElementById('modalTitle');
   var modalSub = document.getElementById('modalSub');
@@ -94,27 +122,50 @@
     alert('Ligue este botão à sua página de cadastro.');
   });
 
-  modalClose.addEventListener('click', closeModal);
-  overlay.addEventListener('click', function(e){
-    if(e.target === overlay) closeModal();
-  });
+  if(modalClose){
+    modalClose.addEventListener('click', closeModal);
+  }
+
+  if(overlay){
+    overlay.addEventListener('click', function(e){
+      if(e.target === overlay) closeModal();
+    });
+  }
+
   document.addEventListener('keydown', function(e){
-    if(e.key === 'Escape' && overlay.classList.contains('open')) closeModal();
+    if(e.key === 'Escape' && overlay && overlay.classList.contains('open')) closeModal();
   });
 
-  recoveryForm.addEventListener('submit', function(e){
-    e.preventDefault();
-    recoveryError.textContent = '';
+  if(recoveryForm){
+    recoveryForm.addEventListener('submit', async function(e){
+      e.preventDefault();
+      recoveryError.textContent = '';
 
-    if(!recoveryEmail.value.trim() || !isValidEmail(recoveryEmail.value.trim())){
-      recoveryError.textContent = 'Digite um e-mail válido.';
-      return;
-    }
+      if(!recoveryEmail.value.trim() || !isValidEmail(recoveryEmail.value.trim())){
+        recoveryError.textContent = 'Digite um e-mail válido.';
+        return;
+      }
 
-    // Ponto de integração: substitua pelo fetch() para sua API de recuperação.
-    console.log('Recuperação solicitada para:', recoveryEmail.value.trim());
-    recoveryForm.style.display = 'none';
-    modalFeedback.classList.add('show');
-  });
+      try {
+        var response = await fetch(API_URL + '/recover', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ email: recoveryEmail.value.trim() })
+        });
+
+        var data = await response.json();
+        if(response.ok && data.success){
+          recoveryForm.style.display = 'none';
+          modalFeedback.classList.add('show');
+          return;
+        }
+
+        recoveryError.textContent = data.message || 'Não foi possível recuperar o acesso.';
+      } catch (error) {
+        recoveryError.textContent = 'Não foi possível conectar ao servidor.';
+        console.error(error);
+      }
+    });
+  }
 
 })();
