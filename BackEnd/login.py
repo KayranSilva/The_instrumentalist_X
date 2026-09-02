@@ -3,6 +3,8 @@ import re
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Dict
 
+from homepage import get_homepage_data
+
 
 USER_DB: Dict[str, Dict[str, str]] = {
     "marina@theinstrumentalist.com": {
@@ -95,6 +97,10 @@ class LoginRequestHandler(BaseHTTPRequestHandler):
         elif self.path == "/recover":
             response = recover_account(payload.get("email", ""))
             status = 200 if response["success"] else 404
+        elif self.path == "/homepage":
+            email = payload.get("email") or "marina@theinstrumentalist.com"
+            response = get_homepage_data(email)
+            status = 200 if response.get("success") else 500
         else:
             response = {"success": False, "message": "Rota não encontrada."}
             status = 404
