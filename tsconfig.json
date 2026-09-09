@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "module": "none",
+    "lib": ["ES2017", "DOM"],
+    "strict": true,
+    "noEmitOnError": true,
+    "rootDir": "FrontEnd/src",
+    "outDir": "FrontEnd",
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["FrontEnd/src/**/*.ts"]
+}

@@ -47,6 +47,8 @@ a{color:inherit;}
   direction: ltr;
 }
 
+button, input{max-width:100%;}
+
 /* ---------- LEFT: identity / illustration panel ---------- */
 .stage{
   position:relative;
@@ -483,6 +485,14 @@ a:focus-visible, button:focus-visible, input:focus-visible{
 }
 
 @media (max-width:480px){
+  .stage{padding:28px 20px 34px;}
+  .stage-copy{max-width:none;}
   .stage-copy h1{font-size:26px;}
+  .stage-copy p{font-size:14px;}
+  .panel{padding:32px 18px 44px;}
+  .form-wrap{max-width:none;}
   .form-head h2{font-size:24px;}
+  .row-between{align-items:flex-start; flex-wrap:wrap; gap:12px;}
+  .signup-hint{line-height:1.6;}
+  .modal{padding:22px 18px;}
 }

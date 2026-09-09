@@ -1,171 +1,48 @@
-(function(){
+(() => {
   "use strict";
+  const API_URL = `http://${window.location.hostname}:8001`;
+  const toggleBtn = document.getElementById("togglePassword");
+  const passwordInput = document.getElementById("password");
+  const loginForm = document.getElementById("loginForm");
+  const emailInput = document.getElementById("email");
+  const emailError = document.getElementById("emailError");
+  const passwordError = document.getElementById("passwordError");
+  const isValidEmail = value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  const showError = (element, message) => { if (element) element.textContent = message; };
 
-  var API_URL = 'http://127.0.0.1:8001';
-
-  var toggleBtn = document.getElementById('togglePassword');
-  var passwordInput = document.getElementById('password');
-
-  if(toggleBtn && passwordInput){
-    toggleBtn.addEventListener('click', function(){
-      var isPassword = passwordInput.type === 'password';
-      passwordInput.type = isPassword ? 'text' : 'password';
-      toggleBtn.setAttribute('aria-pressed', String(isPassword));
-      toggleBtn.setAttribute('aria-label', isPassword ? 'Ocultar senha' : 'Mostrar senha');
-    });
-  }
-
-  var loginForm = document.getElementById('loginForm');
-  var emailInput = document.getElementById('email');
-  var emailError = document.getElementById('emailError');
-  var passwordError = document.getElementById('passwordError');
-
-  function isValidEmail(value){
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-  }
-
-  async function submitLogin(event){
-    event.preventDefault();
-    var valid = true;
-
-    emailError.textContent = '';
-    passwordError.textContent = '';
-
-    if(!emailInput.value.trim()){
-      emailError.textContent = 'Informe seu e-mail.';
-      valid = false;
-    } else if(!isValidEmail(emailInput.value.trim())){
-      emailError.textContent = 'Digite um e-mail válido.';
-      valid = false;
-    }
-
-    if(!passwordInput.value){
-      passwordError.textContent = 'Informe sua senha.';
-      valid = false;
-    } else if(passwordInput.value.length < 6){
-      passwordError.textContent = 'A senha deve ter pelo menos 6 caracteres.';
-      valid = false;
-    }
-
-    if(!valid) return;
-
+  toggleBtn?.addEventListener("click", () => { if (!passwordInput) return; const visible = passwordInput.type === "password"; passwordInput.type = visible ? "text" : "password"; toggleBtn.setAttribute("aria-pressed", String(visible)); toggleBtn.setAttribute("aria-label", visible ? "Ocultar senha" : "Mostrar senha"); });
+  loginForm?.addEventListener("submit", async event => {
+    event.preventDefault(); if (!emailInput || !passwordInput) return;
+    showError(emailError, ""); showError(passwordError, ""); const email = emailInput.value.trim(); let valid = true;
+    if (!email) { showError(emailError, "Informe seu e-mail."); valid = false; } else if (!isValidEmail(email)) { showError(emailError, "Digite um e-mail válido."); valid = false; }
+    if (!passwordInput.value) { showError(passwordError, "Informe sua senha."); valid = false; } else if (passwordInput.value.length < 6) { showError(passwordError, "A senha deve ter pelo menos 6 caracteres."); valid = false; }
+    if (!valid) return;
     try {
-      var response = await fetch(API_URL + '/login', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          email: emailInput.value.trim(),
-          password: passwordInput.value,
-          remember: document.getElementById('remember').checked
-        })
-      });
-
-      var data = await response.json();
-
-      if(response.ok && data.success){
-        window.location.href = 'home.html';
-        return;
-      }
-
-      if(data.message){
-        if(data.message.toLowerCase().includes('e-mail') || data.message.toLowerCase().includes('inválido')){
-          emailError.textContent = data.message;
-        } else {
-          passwordError.textContent = data.message;
-        }
-      }
-    } catch (error) {
-      passwordError.textContent = 'Não foi possível conectar ao servidor de login.';
-      console.error(error);
-    }
-  }
-
-  if(loginForm){
-    loginForm.addEventListener('submit', submitLogin);
-  }
-
-  var overlay = document.getElementById('modalOverlay');
-  var modalTitle = document.getElementById('modalTitle');
-  var modalSub = document.getElementById('modalSub');
-  var modalClose = document.getElementById('modalClose');
-  var recoveryForm = document.getElementById('recoveryForm');
-  var recoveryEmail = document.getElementById('recoveryEmail');
-  var recoveryError = document.getElementById('recoveryError');
-  var modalFeedback = document.getElementById('modalFeedback');
-  var lastFocused = null;
-
-  function openModal(mode){
-    lastFocused = document.activeElement;
-    if(mode === 'login'){
-      modalTitle.textContent = 'Recuperar meu login';
-      modalSub.textContent = 'Informe um e-mail alternativo ou telefone e enviaremos o nome de usuário associado à sua conta.';
-    } else {
-      modalTitle.textContent = 'Recuperar acesso';
-      modalSub.textContent = 'Informe o e-mail associado à sua conta e enviaremos um link para redefinir sua senha.';
-    }
-    recoveryForm.style.display = '';
-    modalFeedback.classList.remove('show');
-    recoveryError.textContent = '';
-    recoveryEmail.value = '';
-    overlay.classList.add('open');
-    setTimeout(function(){ recoveryEmail.focus(); }, 50);
-  }
-
-  function closeModal(){
-    overlay.classList.remove('open');
-    if(lastFocused) lastFocused.focus();
-  }
-
-  document.getElementById('forgotPasswordBtn').addEventListener('click', function(){ openModal('password'); });
-  document.getElementById('forgotLoginBtn').addEventListener('click', function(){ openModal('login'); });
-  document.getElementById('signupBtn').addEventListener('click', function(){
-    alert('Ligue este botão à sua página de cadastro.');
+      const response = await fetch(API_URL + "/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password: passwordInput.value, remember: document.getElementById("remember")?.checked || false }) });
+      const data = await response.json();
+      if (response.ok && data.success) { if (data.user) localStorage.setItem("theInstrumentalistUser", JSON.stringify(data.user)); window.location.href = "home.html"; }
+      else if (data.message) showError(data.message.toLowerCase().includes("e-mail") ? emailError : passwordError, data.message);
+    } catch (error) { showError(passwordError, "Não foi possível conectar ao servidor de login."); console.error(error); }
   });
 
-  if(modalClose){
-    modalClose.addEventListener('click', closeModal);
-  }
-
-  if(overlay){
-    overlay.addEventListener('click', function(e){
-      if(e.target === overlay) closeModal();
-    });
-  }
-
-  document.addEventListener('keydown', function(e){
-    if(e.key === 'Escape' && overlay && overlay.classList.contains('open')) closeModal();
+  const overlay = document.getElementById("modalOverlay");
+  const recoveryForm = document.getElementById("recoveryForm");
+  const recoveryEmail = document.getElementById("recoveryEmail");
+  const recoveryError = document.getElementById("recoveryError");
+  const modalFeedback = document.getElementById("modalFeedback");
+  let lastFocused = null;
+  function openModal(mode) { lastFocused = document.activeElement; document.getElementById("modalTitle").textContent = mode === "login" ? "Recuperar meu login" : "Recuperar acesso"; document.getElementById("modalSub").textContent = mode === "login" ? "Informe um e-mail alternativo ou telefone e enviaremos o nome de usuário associado à sua conta." : "Informe o e-mail associado à sua conta e enviaremos um link para redefinir sua senha."; if (recoveryForm) recoveryForm.style.display = ""; modalFeedback?.classList.remove("show"); showError(recoveryError, ""); if (recoveryEmail) { recoveryEmail.value = ""; recoveryEmail.focus(); } overlay?.classList.add("open"); }
+  function closeModal() { overlay?.classList.remove("open"); if (lastFocused instanceof HTMLElement) lastFocused.focus(); }
+  document.getElementById("forgotPasswordBtn")?.addEventListener("click", () => openModal("password"));
+  document.getElementById("forgotLoginBtn")?.addEventListener("click", () => openModal("login"));
+  document.getElementById("signupBtn")?.addEventListener("click", () => alert("Ligue este botão à sua página de cadastro."));
+  document.getElementById("modalClose")?.addEventListener("click", closeModal);
+  overlay?.addEventListener("click", event => { if (event.target === overlay) closeModal(); });
+  document.addEventListener("keydown", event => { if (event.key === "Escape" && overlay?.classList.contains("open")) closeModal(); });
+  recoveryForm?.addEventListener("submit", async event => {
+    event.preventDefault(); if (!recoveryEmail) return; showError(recoveryError, "");
+    if (!isValidEmail(recoveryEmail.value.trim())) { showError(recoveryError, "Digite um e-mail válido."); return; }
+    try { const response = await fetch(API_URL + "/recover", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: recoveryEmail.value.trim() }) }); const data = await response.json(); if (response.ok && data.success) { recoveryForm.style.display = "none"; modalFeedback?.classList.add("show"); } else showError(recoveryError, data.message || "Não foi possível recuperar o acesso."); }
+    catch (error) { showError(recoveryError, "Não foi possível conectar ao servidor."); console.error(error); }
   });
-
-  if(recoveryForm){
-    recoveryForm.addEventListener('submit', async function(e){
-      e.preventDefault();
-      recoveryError.textContent = '';
-
-      if(!recoveryEmail.value.trim() || !isValidEmail(recoveryEmail.value.trim())){
-        recoveryError.textContent = 'Digite um e-mail válido.';
-        return;
-      }
-
-      try {
-        var response = await fetch(API_URL + '/recover', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ email: recoveryEmail.value.trim() })
-        });
-
-        var data = await response.json();
-        if(response.ok && data.success){
-          recoveryForm.style.display = 'none';
-          modalFeedback.classList.add('show');
-          return;
-        }
-
-        recoveryError.textContent = data.message || 'Não foi possível recuperar o acesso.';
-      } catch (error) {
-        recoveryError.textContent = 'Não foi possível conectar ao servidor.';
-        console.error(error);
-      }
-    });
-  }
-
 })();
