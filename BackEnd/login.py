@@ -119,7 +119,7 @@ class LoginRequestHandler(BaseHTTPRequestHandler):
         return
 
 
-def run_server(host: str = "127.0.0.1", port: int = 8001):
+def run_server(host: str = "0.0.0.0", port: int = 8001):
     server = HTTPServer((host, port), LoginRequestHandler)
     print(f"Servidor de login rodando em http://{host}:{port}")
     server.serve_forever()

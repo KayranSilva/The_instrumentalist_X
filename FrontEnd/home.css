@@ -177,6 +177,8 @@ a:focus-visible, button:focus-visible, input:focus-visible{
   gap:28px;
 }
 
+.brand-name{white-space:nowrap;}
+
 .nav-links{
   display:flex;
   align-items:center;
@@ -459,7 +461,7 @@ a:focus-visible, button:focus-visible, input:focus-visible{
 /* ---------- Lesson cards ---------- */
 .lesson-row{
   display:grid;
-  grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns:repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap:20px;
 }
 
@@ -544,7 +546,7 @@ a:focus-visible, button:focus-visible, input:focus-visible{
 /* ---------- Instruments ---------- */
 .instrument-grid{
   display:grid;
-  grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns:repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   gap:16px;
 }
 
@@ -694,6 +696,7 @@ a:focus-visible, button:focus-visible, input:focus-visible{
 .leaderboard-list .lb-xp{color:var(--ink-soft); font-size:12px;}
 .leaderboard-list li.is-you{background:var(--lavender-100); border-radius:var(--radius-sm); padding:9px 8px;}
 .leaderboard-list li.is-you .lb-name{color:var(--violet-700);}
+.leaderboard-list .lb-name{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 
 /* ---------- Community CTA ---------- */
 .community-card{
@@ -770,6 +773,7 @@ a:focus-visible, button:focus-visible, input:focus-visible{
 
 /* ---------- Responsive ---------- */
 @media (max-width: 980px){
+  .topbar-inner{gap:16px;}
   .nav-links{display:none;}
   .nav-toggle{display:flex;}
   .hero-cards{grid-template-columns:1fr;}
@@ -782,6 +786,7 @@ a:focus-visible, button:focus-visible, input:focus-visible{
 
 @media (max-width: 640px){
   .topbar-inner{padding:12px 18px;}
+  .topbar-actions{margin-left:auto;}
   .user-name{display:none;}
   .user-chip{padding:5px;}
   .hero-inner{padding:40px 18px 48px;}
@@ -791,6 +796,22 @@ a:focus-visible, button:focus-visible, input:focus-visible{
   .journey-grid{grid-template-columns:1fr;}
   .level-card{grid-column:span 1; flex-direction:column; text-align:center;}
   .community-card{padding:28px;}
+  .community-copy h2{font-size:23px;}
+  .footer-inner{padding:24px 18px; align-items:flex-start;}
+  .footer-links{width:100%; flex-wrap:wrap; gap:12px 18px;}
+}
+
+@media (max-width:420px){
+  .brand-name{font-size:13px;}
+  .brand-mark{width:32px; height:32px; font-size:15px;}
+  .hero-greet h1{font-size:28px;}
+  .section-head{align-items:flex-start; flex-direction:column; gap:10px;}
+  .section-head h2{font-size:22px;}
+  .continue-card{padding:18px;}
+  .streak-days{gap:4px;}
+  .streak-day{font-size:11px;}
+  .level-card, .streak-card, .badges-card, .leaderboard-card{padding:18px;}
+  .leaderboard-list li{grid-template-columns:18px 26px minmax(0, 1fr) auto; gap:7px;}
 }
 
 @media (max-width:980px) and (min-width:641px){
