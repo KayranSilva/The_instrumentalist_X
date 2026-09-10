@@ -379,6 +379,10 @@ button, input{max-width:100%;}
 
 .signup-hint .link-btn{font-size:13.5px;}
 
+.admin-access-link{margin:24px 0 0;text-align:center;font-size:12px;}
+.admin-access-link a{color:var(--violet-700);font-weight:700;text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s ease;}
+.admin-access-link a:hover,.admin-access-link a:focus-visible{border-color:var(--violet-700);outline:none;}
+
 /* ---------- Modal (forgot login / password) ---------- */
 .modal-overlay{
   position:fixed;
@@ -462,9 +466,13 @@ button, input{max-width:100%;}
 }
 
 /* focus visibility for accessibility */
-a:focus-visible, button:focus-visible, input:focus-visible{
-  outline:2.5px solid var(--yellow-500);
+a:focus-visible, button:focus-visible{
+  outline:2.5px solid var(--violet-500);
   outline-offset:2px;
+}
+
+input:focus-visible{
+  outline:none;
 }
 
 @media (prefers-reduced-motion: reduce){

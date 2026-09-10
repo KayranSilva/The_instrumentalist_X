@@ -239,6 +239,11 @@ a:focus-visible, button:focus-visible, input:focus-visible{
   padding:5px 14px 5px 5px;
   cursor:pointer;
 }
+.user-menu-wrap{position:relative;}
+.user-menu{position:absolute;top:calc(100% + 10px);right:0;z-index:20;min-width:155px;padding:6px;background:var(--white);border:1px solid #e7e1f2;border-radius:10px;box-shadow:0 14px 30px rgba(36,21,70,.16);opacity:0;pointer-events:none;transform:translateY(-5px);transition:opacity .18s ease,transform .18s ease;}
+.user-menu.is-open{opacity:1;pointer-events:auto;transform:translateY(0);}
+.logout-button{width:100%;padding:10px 12px;border:0;border-radius:6px;background:transparent;color:var(--ink);text-align:left;font-size:13px;cursor:pointer;}
+.logout-button:hover,.logout-button:focus-visible{background:var(--lavender-100);color:var(--violet-700);outline:none;}
 
 .user-name{font-size:13.5px; font-weight:600; color:var(--ink);}
 

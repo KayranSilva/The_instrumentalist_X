@@ -6,7 +6,9 @@ def get_homepage_data(email: str = "marina@theinstrumentalist.com") -> Dict[str,
     normalized_email = (email or "").strip().lower() or "marina@theinstrumentalist.com"
 
     user_name = "Marina"
-    if normalized_email != "marina@theinstrumentalist.com":
+    if normalized_email == "admin@theinstrumentalist.com":
+        user_name = "Administrador"
+    elif normalized_email != "marina@theinstrumentalist.com":
         user_name = normalized_email.split("@")[0].capitalize()
 
     continue_lesson = {

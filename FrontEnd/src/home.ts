@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const API_URL = `http://${window.location.hostname}:8001`;
+  const API_URL = window.location.protocol === "file:" ? "http://localhost:8001" : window.location.origin;
   type StoredUser = { email: string; name?: string };
   type HomepageData = {
     success: boolean;
@@ -31,19 +31,30 @@
     }
   }
 
+  function getHomepageUser(): StoredUser {
+    const isAdminPreview = new URLSearchParams(window.location.search).get("preview") === "admin";
+    return isAdminPreview ? { email: "admin@theinstrumentalist.com", name: "Administrador" } : getUserFromStorage() || { email: "marina@theinstrumentalist.com" };
+  }
+
   function setText(selector: string, value: string): void {
     const element = document.querySelector<HTMLElement>(selector);
     if (element) element.textContent = value;
   }
 
+  function getInitial(name: string): string {
+    return name.trim().charAt(0).toUpperCase() || "U";
+  }
+
   function renderHomepage(data: HomepageData): void {
     if (!data.success) return;
-    const user = data.user || {};
+    const user = data.user || { email: "" };
     const hero = data.hero || {};
     const lesson = hero.continue_lesson;
     const journey = data.journey || {};
 
     setText(".user-name", user.name || "Marina");
+    const userAvatar = document.querySelector<HTMLElement>("#userChip .avatar");
+    if (userAvatar) userAvatar.textContent = getInitial(user.name || "Marina");
     if (hero.greeting) setText(".hero-greet h1", hero.greeting);
     if (hero.message) setText(".hero-greet p", hero.message);
 
@@ -78,7 +89,9 @@
       leaderboard.replaceChildren(...journey.ranking.map((entry) => {
         const item = document.createElement("li");
         if (entry.is_you) item.className = "is-you";
-        item.innerHTML = `<span class="rank">${entry.rank}</span><span class="avatar avatar--sm">${entry.avatar}</span><span class="lb-name">${entry.name}</span><span class="lb-xp">${entry.xp} XP</span>`;
+        const avatar = entry.is_you ? getInitial(user.name || "Marina") : entry.avatar;
+        const displayName = entry.is_you ? `${user.name || "Marina"} (você)` : entry.name;
+        item.innerHTML = `<span class="rank">${entry.rank}</span><span class="avatar avatar--sm">${avatar}</span><span class="lb-name">${displayName}</span><span class="lb-xp">${entry.xp} XP</span>`;
         return item;
       }));
     }
@@ -121,7 +134,7 @@
   }
 
   async function loadHomepage(): Promise<void> {
-    const user = getUserFromStorage();
+    const user = getHomepageUser();
     try {
       const response = await fetch(`${API_URL}/homepage`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: user?.email || "marina@theinstrumentalist.com" }) });
       renderHomepage(await response.json() as HomepageData);
@@ -146,6 +159,25 @@
     const filter = button.dataset.filter || "all";
     document.querySelectorAll<HTMLElement>(".lesson-card").forEach((card) => card.classList.toggle("is-hidden", filter !== "all" && card.dataset.instrument !== filter));
   });
+
+  const userChip = document.getElementById("userChip");
+  const userMenu = document.getElementById("userMenu");
+  const closeUserMenu = (): void => {
+    userMenu?.classList.remove("is-open");
+    userChip?.setAttribute("aria-expanded", "false");
+  };
+  userChip?.addEventListener("click", () => {
+    const isOpen = userMenu?.classList.toggle("is-open") || false;
+    userChip.setAttribute("aria-expanded", String(isOpen));
+  });
+  document.getElementById("logoutButton")?.addEventListener("click", () => {
+    localStorage.removeItem("theInstrumentalistUser");
+    window.location.href = "login.html";
+  });
+  document.addEventListener("click", (event) => {
+    if (!(event.target as Node).parentElement?.closest(".user-menu-wrap")) closeUserMenu();
+  });
+  document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeUserMenu(); });
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => { animateProgress(); loadHomepage(); });
   else { animateProgress(); loadHomepage(); }

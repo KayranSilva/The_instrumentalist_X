@@ -31,10 +31,15 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8.5a6 6 0 0 0-12 0c0 6.5-2.5 8-2.5 8h17s-2.5-1.5-2.5-8Z"/><path d="M10.3 20a1.7 1.7 0 0 0 3.4 0"/></svg>
         <span class="notif-dot"></span>
       </button>
-      <button class="user-chip" id="userChip">
-        <span class="avatar">M</span>
-        <span class="user-name">Marina</span>
-      </button>
+      <div class="user-menu-wrap">
+        <button class="user-chip" id="userChip" aria-expanded="false" aria-haspopup="menu">
+          <span class="avatar">M</span>
+          <span class="user-name">Marina</span>
+        </button>
+        <div class="user-menu" id="userMenu" role="menu">
+          <button class="logout-button" id="logoutButton" type="button" role="menuitem">Sair da conta</button>
+        </div>
+      </div>
       <button class="nav-toggle" id="navToggle" aria-label="Abrir menu" aria-expanded="false">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
       </button>

@@ -9,5 +9,6 @@
     "outDir": "FrontEnd",
     "forceConsistentCasingInFileNames": true
   },
+  "exclude": [],
   "include": ["FrontEnd/src/**/*.ts"]
 }
