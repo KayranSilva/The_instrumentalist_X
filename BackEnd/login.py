@@ -114,6 +114,25 @@ class LoginRequestHandler(BaseHTTPRequestHandler):
         self._send_json({"success": False, "message": "Acesso administrativo não autorizado."}, 401)
         return False
 
+    def _read_request_body(self) -> bytes:
+        if self.headers.get("Transfer-Encoding", "").lower() != "chunked":
+            content_length = int(self.headers.get("Content-Length", "0"))
+            return self.rfile.read(content_length)
+
+        chunks = []
+        while True:
+            size_line = self.rfile.readline().strip()
+            if not size_line:
+                continue
+            size = int(size_line.split(b";", 1)[0], 16)
+            if size == 0:
+                while self.rfile.readline().strip():
+                    pass
+                break
+            chunks.append(self.rfile.read(size))
+            self.rfile.read(2)
+        return b"".join(chunks)
+
     def do_GET(self):
         if self.path == "/admin/content":
             if not self._require_admin():
@@ -139,11 +158,10 @@ class LoginRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_POST(self):
-        content_length = int(self.headers.get("Content-Length", "0"))
-        if content_length > self.MAX_UPLOAD_SIZE:
+        raw_body = self._read_request_body()
+        if len(raw_body) > self.MAX_UPLOAD_SIZE:
             self._send_json({"success": False, "message": "O arquivo excede o limite de 100 MB."}, 413)
             return
-        raw_body = self.rfile.read(content_length)
         content_type = self.headers.get("Content-Type", "")
         upload = None
         if content_type.startswith("multipart/form-data"):
@@ -154,7 +172,8 @@ class LoginRequestHandler(BaseHTTPRequestHandler):
                 if name == "resource" and part.get_filename():
                     upload = (part.get_filename(), part.get_payload(decode=True) or b"")
                 elif name:
-                    payload[name] = part.get_content()
+                    raw_value = part.get_payload(decode=True) or b""
+                    payload[name] = raw_value.decode(part.get_content_charset() or "utf-8", errors="replace")
         else:
             try:
                 payload = json.loads(raw_body.decode("utf-8")) if raw_body else {}
@@ -178,13 +197,17 @@ class LoginRequestHandler(BaseHTTPRequestHandler):
         elif self.path == "/admin/content":
             if not self._require_admin():
                 return
-            if payload.get("type") == "aula":
+            if payload.get("type") in {"aula", "partitura"}:
                 if not upload or not upload[0]:
-                    self._send_json({"success": False, "message": "Selecione um arquivo para a aula."}, 400)
+                    message = "Selecione um arquivo PDF para a partitura." if payload.get("type") == "partitura" else "Selecione um arquivo para a aula."
+                    self._send_json({"success": False, "message": message}, 400)
                     return
                 extension = Path(upload[0]).suffix.lower()
                 if extension not in self.UPLOAD_EXTENSIONS:
                     self._send_json({"success": False, "message": "Formato de arquivo não permitido."}, 400)
+                    return
+                if payload.get("type") == "partitura" and extension != ".pdf":
+                    self._send_json({"success": False, "message": "A partitura deve estar em formato PDF."}, 400)
                     return
                 upload_name = f"{uuid.uuid4().hex}{extension}"
                 upload_dir = self.FRONTEND_DIR / "uploads"

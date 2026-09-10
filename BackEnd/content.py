@@ -84,7 +84,9 @@ def create_content(payload: Dict[str, Any]) -> Dict[str, Any]:
         return {"success": False, "message": "Título e instrumento são obrigatórios."}
     if content_type == "aula" and not url:
         return {"success": False, "message": "Selecione um arquivo para a aula."}
-    if content_type != "aula" and (not url or not url.startswith(("http://", "https://"))):
+    if content_type == "partitura" and (not url or not url.startswith(("http://", "https://", "/uploads/"))):
+        return {"success": False, "message": "Selecione um arquivo PDF ou informe um link válido."}
+    if content_type == "musica" and (not url or not url.startswith(("http://", "https://"))):
         return {"success": False, "message": "Título, instrumento e link válido são obrigatórios."}
 
     item = {
