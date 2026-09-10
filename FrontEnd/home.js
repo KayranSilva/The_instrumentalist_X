@@ -24,6 +24,40 @@
     function getInitial(name) {
         return name.trim().charAt(0).toUpperCase() || "U";
     }
+    function getTimeContext(date = new Date()) {
+        const hour = date.getHours();
+        const greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
+        const dateLabel = new Intl.DateTimeFormat("pt-BR", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+        }).format(date);
+        const dateValue = [date.getFullYear(), date.getMonth() + 1, date.getDate()]
+            .map((part) => String(part).padStart(2, "0"))
+            .join("-");
+        const message = hour < 12
+            ? "Comece o dia afinando sua escuta e avance um pouco na sua próxima aula."
+            : hour < 18
+                ? "Uma pausa para praticar agora pode deixar sua evolução ainda mais consistente."
+                : "Feche o dia com música: você está a duas lições de completar o módulo de Violão Popular.";
+        return { greeting, dateLabel, dateValue, message, dayIndex: (date.getDay() + 6) % 7 };
+    }
+    function updateTimeContext(userName) {
+        const context = getTimeContext();
+        setText(".hero-greet h1", `${context.greeting}, ${userName}.`);
+        setText(".hero-greet p", context.message);
+        const dateElement = document.querySelector("#heroDate");
+        if (dateElement) {
+            dateElement.textContent = context.dateLabel;
+            dateElement.dateTime = context.dateValue;
+        }
+        const days = document.querySelectorAll(".streak-day");
+        days.forEach((day, index) => {
+            var _a;
+            day.classList.toggle("is-today", index === context.dayIndex);
+            day.setAttribute("aria-label", `${((_a = day.textContent) === null || _a === void 0 ? void 0 : _a.trim()) || "Dia"}${index === context.dayIndex ? ", hoje" : ""}`);
+        });
+    }
     function renderHomepage(data) {
         if (!data.success)
             return;
@@ -31,14 +65,12 @@
         const hero = data.hero || {};
         const lesson = hero.continue_lesson;
         const journey = data.journey || {};
-        setText(".user-name", user.name || "Marina");
+        const displayName = user.name || "Marina";
+        setText(".user-name", displayName);
         const userAvatar = document.querySelector("#userChip .avatar");
         if (userAvatar)
-            userAvatar.textContent = getInitial(user.name || "Marina");
-        if (hero.greeting)
-            setText(".hero-greet h1", hero.greeting);
-        if (hero.message)
-            setText(".hero-greet p", hero.message);
+            userAvatar.textContent = getInitial(displayName);
+        updateTimeContext(displayName);
         if (lesson) {
             setText(".continue-info .tag", `${lesson.instrument} · ${lesson.module}`);
             setText(".continue-info h3", lesson.title);
@@ -72,9 +104,9 @@
                 const item = document.createElement("li");
                 if (entry.is_you)
                     item.className = "is-you";
-                const avatar = entry.is_you ? getInitial(user.name || "Marina") : entry.avatar;
-                const displayName = entry.is_you ? `${user.name || "Marina"} (você)` : entry.name;
-                item.innerHTML = `<span class="rank">${entry.rank}</span><span class="avatar avatar--sm">${avatar}</span><span class="lb-name">${displayName}</span><span class="lb-xp">${entry.xp} XP</span>`;
+                const avatar = entry.is_you ? getInitial(displayName) : entry.avatar;
+                const rankingName = entry.is_you ? `${displayName} (você)` : entry.name;
+                item.innerHTML = `<span class="rank">${entry.rank}</span><span class="avatar avatar--sm">${avatar}</span><span class="lb-name">${rankingName}</span><span class="lb-xp">${entry.xp} XP</span>`;
                 return item;
             }));
         }
@@ -121,6 +153,10 @@
             console.error("Erro ao carregar homepage:", error);
         }
     }
+    window.setInterval(() => {
+        const user = getHomepageUser();
+        updateTimeContext(user.name || "Marina");
+    }, 60000);
     (_a = document.getElementById("navToggle")) === null || _a === void 0 ? void 0 : _a.addEventListener("click", () => {
         const nav = document.getElementById("navLinks");
         const toggle = document.getElementById("navToggle");

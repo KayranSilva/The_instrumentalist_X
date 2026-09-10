@@ -79,14 +79,16 @@
         const resourceField = document.getElementById("resourceField");
         const urlField = document.getElementById("urlField");
         const resource = document.getElementById("resource");
+        const isUpload = type === "aula" || type === "partitura";
         const linkLabel = type === "partitura" ? "Link do PDF <i>*</i>" : "Link da música <i>*</i>";
-        document.getElementById("urlLabel").innerHTML = type === "aula" ? "Arquivo da aula <i>*</i>" : linkLabel;
-        resourceField.style.display = type === "aula" ? "block" : "none";
-        urlField.style.display = type === "aula" ? "none" : "block";
-        resource.required = type === "aula";
+        document.getElementById("urlLabel").innerHTML = type === "aula" ? "Arquivo da aula <i>*</i>" : "Arquivo PDF da partitura <i>*</i>";
+        resource.accept = type === "partitura" ? ".pdf,application/pdf" : "video/*,audio/*,.pdf,.png,.jpg,.jpeg";
+        resourceField.style.display = isUpload ? "block" : "none";
+        urlField.style.display = isUpload ? "none" : "block";
+        resource.required = isUpload;
         const url = document.getElementById("url");
         if (url)
-            url.required = type !== "aula";
+            url.required = !isUpload;
         document.getElementById("durationField").style.display = type === "partitura" ? "none" : "block";
     }));
     document.querySelectorAll(".filter-button").forEach(button => button.addEventListener("click", () => { document.querySelectorAll(".filter-button").forEach(item => item.classList.remove("active")); button.classList.add("active"); activeFilter = button.dataset.filter || "todos"; renderList(); }));
