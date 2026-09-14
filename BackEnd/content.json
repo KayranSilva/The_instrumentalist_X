@@ -1,0 +1,26 @@
+[
+  {
+    "id": "music-1",
+    "type": "musica",
+    "title": "Valsa em dó maior",
+    "instrument": "Piano",
+    "description": "Uma peça curta para praticar dinâmica e articulação.",
+    "url": "https://www.youtube.com/watch?v=demo",
+    "teacher": "Bianca Rocha",
+    "duration": "03:42",
+    "level": "Iniciante",
+    "created_at": "2026-09-01T12:00:00+00:00"
+  },
+  {
+    "id": "score-1",
+    "type": "partitura",
+    "title": "Estudo de arpejos",
+    "instrument": "Violão",
+    "description": "Partitura em PDF para estudar arpejos em 6/8.",
+    "url": "https://example.com/estudo-de-arpejos.pdf",
+    "teacher": "Rafael Nunes",
+    "duration": "",
+    "level": "Intermediário",
+    "created_at": "2026-08-28T12:00:00+00:00"
+  }
+]

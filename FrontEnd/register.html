@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Instrumentalist — Criar conta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="layout">
+  <section class="stage">
+    <div class="brand"><div class="brand-mark">I</div><span class="brand-name">The Instrumentalist</span></div>
+    <div class="stage-copy">
+      <span class="kicker">Comece sua jornada</span>
+      <h1>Aprenda no seu ritmo, com espaço para cada instrumento.</h1>
+      <p>Crie sua conta para acompanhar aulas, registrar sua prática e continuar evoluindo de onde parou.</p>
+    </div>
+    <div class="stage-figure" aria-hidden="true"><img src="music.png" alt="Ilustração de música"></div>
+    <div class="stage-stats"><div class="stat"><b>12k+</b><span>alunos ativos</span></div><div class="stat"><b>98%</b><span>satisfação</span></div><div class="stat"><b>24/7</b><span>aprendizado</span></div></div>
+  </section>
+  <section class="panel">
+    <div class="form-wrap">
+      <div class="form-head"><h2>Criar sua conta</h2><p>Preencha seus dados para começar a aprender.</p></div>
+      <form id="registerForm" novalidate>
+        <div class="field"><label for="name">Nome</label><div class="input-shell"><input type="text" id="name" name="name" placeholder="Como podemos chamar você?" autocomplete="name" required maxlength="80"></div><span class="field-error" id="nameError"></span></div>
+        <div class="field"><label for="email">E-mail</label><div class="input-shell"><input type="email" id="email" name="email" placeholder="voce@exemplo.com" autocomplete="email" required></div><span class="field-error" id="emailError"></span></div>
+        <div class="field"><label for="password">Senha</label><div class="input-shell"><input type="password" id="password" name="password" placeholder="Pelo menos 6 caracteres" autocomplete="new-password" required minlength="6"></div><span class="field-error" id="passwordError"></span></div>
+        <div class="field"><label for="confirmPassword">Confirmar senha</label><div class="input-shell"><input type="password" id="confirmPassword" name="confirmPassword" placeholder="Digite a senha novamente" autocomplete="new-password" required minlength="6"></div><span class="field-error" id="confirmPasswordError"></span></div>
+        <button type="submit" class="btn-primary">Criar conta</button>
+        <p class="form-status" id="formStatus" role="status"></p>
+      </form>
+      <p class="signup-hint">Já tem uma conta? <a class="link-btn" href="login.html">Entrar</a></p>
+    </div>
+  </section>
+</div>
+<script src="register.js"></script>
+</body>
+</html>
