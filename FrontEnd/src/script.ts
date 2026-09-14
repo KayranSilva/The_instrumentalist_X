@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const API_URL = `http://${window.location.hostname}:8001`;
+  const API_URL = window.location.protocol === "file:" ? "http://localhost:8001" : window.location.origin;
   const toggleBtn = document.getElementById("togglePassword");
   const passwordInput = document.getElementById("password") as HTMLInputElement | null;
   const loginForm = document.getElementById("loginForm") as HTMLFormElement | null;

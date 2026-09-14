@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const API_URL = `http://${window.location.hostname}:8001`;
+  const API_URL = window.location.protocol === "file:" ? "http://localhost:8001" : window.location.origin;
   type StoredUser = { email: string; name?: string };
   type HomepageData = {
     success: boolean;
@@ -31,21 +31,77 @@
     }
   }
 
+  function getHomepageUser(): StoredUser {
+    const isAdminPreview = new URLSearchParams(window.location.search).get("preview") === "admin";
+    return isAdminPreview ? { email: "admin@theinstrumentalist.com", name: "Administrador" } : getUserFromStorage() || { email: "marina@theinstrumentalist.com" };
+  }
+
   function setText(selector: string, value: string): void {
     const element = document.querySelector<HTMLElement>(selector);
     if (element) element.textContent = value;
   }
 
+  function getInitial(name: string): string {
+    return name.trim().charAt(0).toUpperCase() || "U";
+  }
+
+  type TimeContext = {
+    greeting: string;
+    dateLabel: string;
+    dateValue: string;
+    message: string;
+    dayIndex: number;
+  };
+
+  function getTimeContext(date = new Date()): TimeContext {
+    const hour = date.getHours();
+    const greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
+    const dateLabel = new Intl.DateTimeFormat("pt-BR", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    }).format(date);
+    const dateValue = [date.getFullYear(), date.getMonth() + 1, date.getDate()]
+      .map((part) => String(part).padStart(2, "0"))
+      .join("-");
+    const message = hour < 12
+      ? "Comece o dia afinando sua escuta e avance um pouco na sua próxima aula."
+      : hour < 18
+        ? "Uma pausa para praticar agora pode deixar sua evolução ainda mais consistente."
+        : "Feche o dia com música: você está a duas lições de completar o módulo de Violão Popular.";
+
+    return { greeting, dateLabel, dateValue, message, dayIndex: (date.getDay() + 6) % 7 };
+  }
+
+  function updateTimeContext(userName: string): void {
+    const context = getTimeContext();
+    setText(".hero-greet h1", `${context.greeting}, ${userName}.`);
+    setText(".hero-greet p", context.message);
+    const dateElement = document.querySelector<HTMLTimeElement>("#heroDate");
+    if (dateElement) {
+      dateElement.textContent = context.dateLabel;
+      dateElement.dateTime = context.dateValue;
+    }
+
+    const days = document.querySelectorAll<HTMLElement>(".streak-day");
+    days.forEach((day, index) => {
+      day.classList.toggle("is-today", index === context.dayIndex);
+      day.setAttribute("aria-label", `${day.textContent?.trim() || "Dia"}${index === context.dayIndex ? ", hoje" : ""}`);
+    });
+  }
+
   function renderHomepage(data: HomepageData): void {
     if (!data.success) return;
-    const user = data.user || {};
+    const user = data.user || { email: "" };
     const hero = data.hero || {};
     const lesson = hero.continue_lesson;
     const journey = data.journey || {};
+    const displayName = user.name || "Marina";
 
-    setText(".user-name", user.name || "Marina");
-    if (hero.greeting) setText(".hero-greet h1", hero.greeting);
-    if (hero.message) setText(".hero-greet p", hero.message);
+    setText(".user-name", displayName);
+    const userAvatar = document.querySelector<HTMLElement>("#userChip .avatar");
+    if (userAvatar) userAvatar.textContent = getInitial(displayName);
+    updateTimeContext(displayName);
 
     if (lesson) {
       setText(".continue-info .tag", `${lesson.instrument} · ${lesson.module}`);
@@ -78,7 +134,9 @@
       leaderboard.replaceChildren(...journey.ranking.map((entry) => {
         const item = document.createElement("li");
         if (entry.is_you) item.className = "is-you";
-        item.innerHTML = `<span class="rank">${entry.rank}</span><span class="avatar avatar--sm">${entry.avatar}</span><span class="lb-name">${entry.name}</span><span class="lb-xp">${entry.xp} XP</span>`;
+        const avatar = entry.is_you ? getInitial(displayName) : entry.avatar;
+        const rankingName = entry.is_you ? `${displayName} (você)` : entry.name;
+        item.innerHTML = `<span class="rank">${entry.rank}</span><span class="avatar avatar--sm">${avatar}</span><span class="lb-name">${rankingName}</span><span class="lb-xp">${entry.xp} XP</span>`;
         return item;
       }));
     }
@@ -121,7 +179,7 @@
   }
 
   async function loadHomepage(): Promise<void> {
-    const user = getUserFromStorage();
+    const user = getHomepageUser();
     try {
       const response = await fetch(`${API_URL}/homepage`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: user?.email || "marina@theinstrumentalist.com" }) });
       renderHomepage(await response.json() as HomepageData);
@@ -129,6 +187,11 @@
       console.error("Erro ao carregar homepage:", error);
     }
   }
+
+  window.setInterval(() => {
+    const user = getHomepageUser();
+    updateTimeContext(user.name || "Marina");
+  }, 60_000);
 
   document.getElementById("navToggle")?.addEventListener("click", () => {
     const nav = document.getElementById("navLinks");
@@ -146,6 +209,25 @@
     const filter = button.dataset.filter || "all";
     document.querySelectorAll<HTMLElement>(".lesson-card").forEach((card) => card.classList.toggle("is-hidden", filter !== "all" && card.dataset.instrument !== filter));
   });
+
+  const userChip = document.getElementById("userChip");
+  const userMenu = document.getElementById("userMenu");
+  const closeUserMenu = (): void => {
+    userMenu?.classList.remove("is-open");
+    userChip?.setAttribute("aria-expanded", "false");
+  };
+  userChip?.addEventListener("click", () => {
+    const isOpen = userMenu?.classList.toggle("is-open") || false;
+    userChip.setAttribute("aria-expanded", String(isOpen));
+  });
+  document.getElementById("logoutButton")?.addEventListener("click", () => {
+    localStorage.removeItem("theInstrumentalistUser");
+    window.location.href = "login.html";
+  });
+  document.addEventListener("click", (event) => {
+    if (!(event.target as Node).parentElement?.closest(".user-menu-wrap")) closeUserMenu();
+  });
+  document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeUserMenu(); });
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => { animateProgress(); loadHomepage(); });
   else { animateProgress(); loadHomepage(); }
