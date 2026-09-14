@@ -1,5 +1,3 @@
--- The Instrumentalist X: initial Supabase database schema
-
 create extension if not exists pgcrypto;
 
 create type public.profile_role as enum ('student', 'teacher', 'admin');

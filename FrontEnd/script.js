@@ -88,7 +88,6 @@
         lastFocused.focus(); }
     (_a = document.getElementById("forgotPasswordBtn")) === null || _a === void 0 ? void 0 : _a.addEventListener("click", () => openModal("password"));
     (_b = document.getElementById("forgotLoginBtn")) === null || _b === void 0 ? void 0 : _b.addEventListener("click", () => openModal("login"));
-    (_c = document.getElementById("signupBtn")) === null || _c === void 0 ? void 0 : _c.addEventListener("click", () => alert("Ligue este botão à sua página de cadastro."));
     (_d = document.getElementById("modalClose")) === null || _d === void 0 ? void 0 : _d.addEventListener("click", closeModal);
     overlay === null || overlay === void 0 ? void 0 : overlay.addEventListener("click", (event) => { if (event.target === overlay)
         closeModal(); });

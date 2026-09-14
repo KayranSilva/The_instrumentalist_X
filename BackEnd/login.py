@@ -1,23 +1,22 @@
 import json
+import os
 import re
 import mimetypes
 import uuid
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 from email import policy
 from email.parser import BytesParser
 from pathlib import Path
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from typing import Dict
+from typing import Any, Dict
 
 from content import create_content, delete_content, is_admin_key_valid, list_content
 from homepage import get_homepage_data
 
 
-USER_DB: Dict[str, Dict[str, str]] = {
-    "marina@theinstrumentalist.com": {
-        "password": "usuario123",
-        "name": "Marina",
-    }
-}
+SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
 
 
 def validate_email(email: str) -> bool:
@@ -30,8 +29,69 @@ def validate_email(email: str) -> bool:
     return bool(re.fullmatch(pattern, email))
 
 
+def supabase_auth_request(path: str, payload: Dict[str, Any]) -> tuple[bool, Dict[str, Any], int]:
+    """Chama o Auth REST do Supabase sem persistir credenciais no backend."""
+    if not SUPABASE_URL or not SUPABASE_ANON_KEY:
+        return False, {"message": "Configure SUPABASE_URL e SUPABASE_ANON_KEY no ambiente."}, 503
+
+    request = Request(
+        f"{SUPABASE_URL}/auth/v1/{path}",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"apikey": SUPABASE_ANON_KEY, "Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=10) as response:
+            body = response.read().decode("utf-8")
+            return True, json.loads(body) if body else {}, response.status
+    except HTTPError as error:
+        try:
+            body = error.read().decode("utf-8")
+            details = json.loads(body) if body else {}
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            details = {}
+        return False, details, error.code
+    except (URLError, TimeoutError):
+        return False, {"message": "Não foi possível conectar ao banco de dados."}, 503
+
+
+def auth_error_message(details: Dict[str, Any], default: str) -> str:
+    return str(details.get("error_description") or details.get("msg") or details.get("message") or default)
+
+
+def register_user(name: str, email: str, password: str) -> Dict[str, object]:
+    """Cria a conta no Supabase Auth; o trigger cria o perfil relacionado."""
+    normalized_email = (email or "").strip().lower()
+    normalized_name = (name or "").strip()
+    if not normalized_name or len(normalized_name) > 80:
+        return {"success": False, "message": "Informe um nome válido."}
+    if not validate_email(normalized_email):
+        return {"success": False, "message": "E-mail inválido."}
+    if not isinstance(password, str) or len(password) < 6:
+        return {"success": False, "message": "A senha deve ter pelo menos 6 caracteres."}
+
+    ok, details, status = supabase_auth_request("signup", {
+        "email": normalized_email,
+        "password": password,
+        "data": {"name": normalized_name},
+    })
+    if not ok:
+        message = auth_error_message(details, "Não foi possível criar a conta.")
+        if status in {400, 422} and "already" in message.lower():
+            message = "Este e-mail já está cadastrado."
+        return {"success": False, "message": message}
+
+    has_session = bool(details.get("access_token"))
+    return {
+        "success": True,
+        "requires_confirmation": not has_session,
+        "message": "Conta criada com sucesso." if has_session else "Conta criada. Confirme seu e-mail para entrar.",
+        "user": {"email": normalized_email, "name": normalized_name} if has_session else None,
+    }
+
+
 def authenticate_user(email: str, password: str, remember: bool = False) -> Dict[str, object]:
-    """Valida os dados do login e retorna um payload simples."""
+    """Autentica o usuário usando o Supabase Auth."""
     normalized_email = (email or "").strip().lower()
 
     if not validate_email(normalized_email):
@@ -40,20 +100,25 @@ def authenticate_user(email: str, password: str, remember: bool = False) -> Dict
     if not isinstance(password, str) or len(password.strip()) < 6:
         return {"success": False, "message": "Senha inválida."}
 
-    user = USER_DB.get(normalized_email)
-    if not user:
-        return {"success": False, "message": "E-mail ou senha inválidos."}
+    ok, details, status = supabase_auth_request("token?grant_type=password", {"email": normalized_email, "password": password})
+    if not ok:
+        if status == 400:
+            return {"success": False, "message": auth_error_message(details, "E-mail ou senha inválidos.")}
+        return {"success": False, "message": auth_error_message(details, "Não foi possível realizar o login.")}
 
-    if user["password"] != password:
-        return {"success": False, "message": "E-mail ou senha inválidos."}
+    user = details.get("user") or {}
+    metadata = user.get("user_metadata") or {}
+    name = metadata.get("name") or normalized_email.split("@", 1)[0].capitalize()
 
     return {
         "success": True,
         "message": "Login realizado com sucesso.",
         "user": {
             "email": normalized_email,
-            "name": user["name"],
+            "name": name,
             "remember": remember,
+            "access_token": details.get("access_token"),
+            "refresh_token": details.get("refresh_token"),
         },
     }
 
@@ -65,12 +130,13 @@ def recover_account(email: str) -> Dict[str, object]:
     if not validate_email(normalized_email):
         return {"success": False, "message": "Digite um e-mail válido."}
 
-    if normalized_email not in USER_DB:
-        return {"success": False, "message": "E-mail não encontrado."}
+    ok, details, _ = supabase_auth_request("recover", {"email": normalized_email})
+    if not ok:
+        return {"success": False, "message": auth_error_message(details, "Não foi possível iniciar a recuperação.")}
 
     return {
         "success": True,
-        "message": f"Instruções de recuperação enviadas para {normalized_email}.",
+        "message": "Se o e-mail existir, as instruções de recuperação serão enviadas em instantes.",
     }
 
 
@@ -180,7 +246,10 @@ class LoginRequestHandler(BaseHTTPRequestHandler):
             except (UnicodeDecodeError, json.JSONDecodeError):
                 payload = {}
 
-        if self.path == "/login":
+        if self.path == "/register":
+            response = register_user(payload.get("name", ""), payload.get("email", ""), payload.get("password", ""))
+            status = 201 if response["success"] else (503 if "ambiente" in response.get("message", "") else 400)
+        elif self.path == "/login":
             response = authenticate_user(
                 payload.get("email", ""),
                 payload.get("password", ""),

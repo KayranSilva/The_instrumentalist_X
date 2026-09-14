@@ -64,7 +64,6 @@
 
   document.getElementById("forgotPasswordBtn")?.addEventListener("click", () => openModal("password"));
   document.getElementById("forgotLoginBtn")?.addEventListener("click", () => openModal("login"));
-  document.getElementById("signupBtn")?.addEventListener("click", () => alert("Ligue este botão à sua página de cadastro."));
   document.getElementById("modalClose")?.addEventListener("click", closeModal);
   overlay?.addEventListener("click", (event) => { if (event.target === overlay) closeModal(); });
   document.addEventListener("keydown", (event) => { if (event.key === "Escape" && overlay?.classList.contains("open")) closeModal(); });
