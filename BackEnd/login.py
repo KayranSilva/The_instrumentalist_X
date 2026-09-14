@@ -260,7 +260,10 @@ class LoginRequestHandler(BaseHTTPRequestHandler):
             response = recover_account(payload.get("email", ""))
             status = 200 if response["success"] else 404
         elif self.path == "/homepage":
-            email = payload.get("email") or "marina@theinstrumentalist.com"
+            email = payload.get("email", "")
+            if not email:
+                self._send_json({"success": False, "message": "Usuário não autenticado."}, 401)
+                return
             response = get_homepage_data(email)
             status = 200 if response.get("success") else 500
         elif self.path == "/admin/content":
