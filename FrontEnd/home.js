@@ -14,7 +14,7 @@
     }
     function getHomepageUser() {
         const isAdminPreview = new URLSearchParams(window.location.search).get("preview") === "admin";
-        return isAdminPreview ? { email: "admin@theinstrumentalist.com", name: "Administrador" } : getUserFromStorage() || { email: "marina@theinstrumentalist.com" };
+        return isAdminPreview ? { email: "admin@theinstrumentalist.com", name: "Administrador" } : getUserFromStorage();
     }
     function setText(selector, value) {
         const element = document.querySelector(selector);
@@ -72,6 +72,7 @@
             userAvatar.textContent = getInitial(displayName);
         updateTimeContext(displayName);
         if (lesson) {
+            document.querySelector(".continue-card")?.removeAttribute("hidden");
             setText(".continue-info .tag", `${lesson.instrument} · ${lesson.module}`);
             setText(".continue-info h3", lesson.title);
             setText(".continue-info .progress-label", `${lesson.progress}% concluído · ${lesson.time_remaining}`);
@@ -80,8 +81,13 @@
                 progress.style.width = `${lesson.progress}%`;
         }
         const lessonRow = document.getElementById("lessonRow");
-        if (lessonRow && data.lessons) {
+        const lessonSection = document.getElementById("lessons");
+        if (lessonRow && (data.lessons === null || data.lessons === void 0 ? void 0 : data.lessons.length)) {
+            lessonSection?.removeAttribute("hidden");
             lessonRow.replaceChildren(...data.lessons.map((item) => createLessonCard(item)));
+        }
+        else {
+            lessonSection?.setAttribute("hidden", "");
         }
         const instrumentGrid = document.querySelector(".instrument-grid");
         if (instrumentGrid && data.instruments) {
@@ -98,6 +104,18 @@
         }
         if (journey.xp_current && journey.xp_goal)
             setText(".level-info .progress-label", `${journey.xp_current} / ${journey.xp_goal} XP`);
+        const stats = data.hero?.stats || [];
+        stats.forEach((stat) => {
+            const statPill = Array.from(document.querySelectorAll(".stat-pill")).find((pill) => { var _a; return (_a = pill.textContent) === null || _a === void 0 ? void 0 : _a.includes(stat.label); });
+            if (statPill)
+                statPill.querySelector("b").textContent = stat.label === "Nível" ? `Nível ${stat.value}` : stat.value;
+        });
+        if (journey.streak !== undefined)
+            setText(".streak-note", journey.streak ? `Pratique hoje para manter os ${journey.streak} dias seguidos.` : "Pratique hoje para começar sua sequência.");
+        if (journey.weekly_sequence)
+            document.querySelectorAll(".streak-day").forEach((day, index) => { var _a; return day.classList.toggle("is-done", Boolean((_a = journey.weekly_sequence) === null || _a === void 0 ? void 0 : _a[index])); });
+        if (journey.badges)
+            document.querySelectorAll(".badges-grid .badge").forEach((badge, index) => { var _a; return badge.classList.toggle("is-locked", !((_a = journey.badges) === null || _a === void 0 ? void 0 : _a[index]?.unlocked)); });
         const leaderboard = document.querySelector(".leaderboard-list");
         if (leaderboard && journey.ranking) {
             leaderboard.replaceChildren(...journey.ranking.map((entry) => {
@@ -145,8 +163,12 @@
     }
     async function loadHomepage() {
         const user = getHomepageUser();
+        if (!user) {
+            window.location.href = "login.html";
+            return;
+        }
         try {
-            const response = await fetch(`${API_URL}/homepage`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: (user === null || user === void 0 ? void 0 : user.email) || "marina@theinstrumentalist.com" }) });
+            const response = await fetch(`${API_URL}/homepage`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: user.email }) });
             renderHomepage(await response.json());
         }
         catch (error) {
@@ -155,7 +177,8 @@
     }
     window.setInterval(() => {
         const user = getHomepageUser();
-        updateTimeContext(user.name || "Marina");
+        if (user)
+            updateTimeContext(user.name || "Usuário");
     }, 60000);
     (_a = document.getElementById("navToggle")) === null || _a === void 0 ? void 0 : _a.addEventListener("click", () => {
         const nav = document.getElementById("navLinks");

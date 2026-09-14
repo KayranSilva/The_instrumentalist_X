@@ -16,10 +16,11 @@
         progress: number;
         time_remaining: string;
       };
+      stats?: Array<{ label: string; value: string; icon: string }>;
     };
     lessons?: Array<{ instrument: string; title: string; teacher: string; duration: string; progress: number; badge?: string | null }>;
     instruments?: Array<{ name: string; meta: string; icon: string }>;
-    journey?: { level?: number; xp_needed?: number; progress?: number; xp_current?: number; xp_goal?: number; ranking?: Array<{ rank: number; name: string; xp: number; avatar: string; is_you?: boolean }> };
+    journey?: { level?: number; xp_needed?: number; progress?: number; xp_current?: number; xp_goal?: number; streak?: number; weekly_sequence?: boolean[]; badges?: Array<{ name: string; unlocked: boolean }>; ranking?: Array<{ rank: number; name: string; xp: number; avatar: string; is_you?: boolean }> };
   };
 
   function getUserFromStorage(): StoredUser | null {
@@ -31,9 +32,9 @@
     }
   }
 
-  function getHomepageUser(): StoredUser {
+  function getHomepageUser(): StoredUser | null {
     const isAdminPreview = new URLSearchParams(window.location.search).get("preview") === "admin";
-    return isAdminPreview ? { email: "admin@theinstrumentalist.com", name: "Administrador" } : getUserFromStorage() || { email: "marina@theinstrumentalist.com" };
+    return isAdminPreview ? { email: "admin@theinstrumentalist.com", name: "Administrador" } : getUserFromStorage();
   }
 
   function setText(selector: string, value: string): void {
@@ -104,6 +105,7 @@
     updateTimeContext(displayName);
 
     if (lesson) {
+      document.querySelector<HTMLElement>(".continue-card")?.removeAttribute("hidden");
       setText(".continue-info .tag", `${lesson.instrument} · ${lesson.module}`);
       setText(".continue-info h3", lesson.title);
       setText(".continue-info .progress-label", `${lesson.progress}% concluído · ${lesson.time_remaining}`);
@@ -112,8 +114,12 @@
     }
 
     const lessonRow = document.getElementById("lessonRow");
-    if (lessonRow && data.lessons) {
+    const lessonSection = document.getElementById("lessons");
+    if (lessonRow && data.lessons?.length) {
+      lessonSection?.removeAttribute("hidden");
       lessonRow.replaceChildren(...data.lessons.map((item) => createLessonCard(item)));
+    } else {
+      lessonSection?.setAttribute("hidden", "");
     }
 
     const instrumentGrid = document.querySelector<HTMLElement>(".instrument-grid");
@@ -128,6 +134,15 @@
       if (progress) progress.style.width = `${journey.progress}%`;
     }
     if (journey.xp_current && journey.xp_goal) setText(".level-info .progress-label", `${journey.xp_current} / ${journey.xp_goal} XP`);
+
+    const stats = data.hero?.stats || [];
+    stats.forEach((stat) => {
+      const statPill = Array.from(document.querySelectorAll<HTMLElement>(".stat-pill")).find((pill) => pill.textContent?.includes(stat.label));
+      if (statPill) statPill.querySelector("b")!.textContent = stat.label === "Nível" ? `Nível ${stat.value}` : stat.value;
+    });
+    if (journey.streak !== undefined) setText(".streak-note", journey.streak ? `Pratique hoje para manter os ${journey.streak} dias seguidos.` : "Pratique hoje para começar sua sequência.");
+    if (journey.weekly_sequence) document.querySelectorAll<HTMLElement>(".streak-day").forEach((day, index) => day.classList.toggle("is-done", Boolean(journey.weekly_sequence?.[index])));
+    if (journey.badges) document.querySelectorAll<HTMLElement>(".badges-grid .badge").forEach((badge, index) => badge.classList.toggle("is-locked", !journey.badges?.[index]?.unlocked));
 
     const leaderboard = document.querySelector<HTMLOListElement>(".leaderboard-list");
     if (leaderboard && journey.ranking) {
@@ -180,8 +195,12 @@
 
   async function loadHomepage(): Promise<void> {
     const user = getHomepageUser();
+    if (!user) {
+      window.location.href = "login.html";
+      return;
+    }
     try {
-      const response = await fetch(`${API_URL}/homepage`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: user?.email || "marina@theinstrumentalist.com" }) });
+      const response = await fetch(`${API_URL}/homepage`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: user.email }) });
       renderHomepage(await response.json() as HomepageData);
     } catch (error) {
       console.error("Erro ao carregar homepage:", error);
@@ -190,7 +209,7 @@
 
   window.setInterval(() => {
     const user = getHomepageUser();
-    updateTimeContext(user.name || "Marina");
+    if (user) updateTimeContext(user.name || "Usuário");
   }, 60_000);
 
   document.getElementById("navToggle")?.addEventListener("click", () => {

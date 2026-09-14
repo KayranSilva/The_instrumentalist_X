@@ -4,6 +4,7 @@ from typing import Any, Dict, List
 def get_homepage_data(email: str = "marina@theinstrumentalist.com") -> Dict[str, Any]:
     """Retorna os dados dinâmicos da homepage do usuário."""
     normalized_email = (email or "").strip().lower() or "marina@theinstrumentalist.com"
+    is_demo_user = normalized_email == "marina@theinstrumentalist.com"
 
     user_name = "Marina"
     if normalized_email == "admin@theinstrumentalist.com":
@@ -11,13 +12,7 @@ def get_homepage_data(email: str = "marina@theinstrumentalist.com") -> Dict[str,
     elif normalized_email != "marina@theinstrumentalist.com":
         user_name = normalized_email.split("@")[0].capitalize()
 
-    continue_lesson = {
-        "instrument": "Violão",
-        "module": "Módulo 3",
-        "title": "Dedilhado com métrica 6/8",
-        "progress": 64,
-        "time_remaining": "8 min restantes",
-    }
+    continue_lesson = None
 
     lessons: List[Dict[str, Any]] = [
         {
@@ -26,7 +21,7 @@ def get_homepage_data(email: str = "marina@theinstrumentalist.com") -> Dict[str,
             "title": "Dedilhado com métrica 6/8",
             "teacher": "Rafael Nunes",
             "duration": "14:20",
-            "progress": 64,
+            "progress": 64 if is_demo_user else 0,
             "badge": None,
         },
         {
@@ -35,7 +30,7 @@ def get_homepage_data(email: str = "marina@theinstrumentalist.com") -> Dict[str,
             "title": "Acordes de sétima na prática",
             "teacher": "Bianca Rocha",
             "duration": "09:45",
-            "progress": 20,
+            "progress": 20 if is_demo_user else 0,
             "badge": None,
         },
         {
@@ -53,7 +48,7 @@ def get_homepage_data(email: str = "marina@theinstrumentalist.com") -> Dict[str,
             "title": "Respiração e apoio vocal",
             "teacher": "Aline Souza",
             "duration": "07:30",
-            "progress": 100,
+            "progress": 100 if is_demo_user else 0,
             "badge": None,
         },
         {
@@ -75,41 +70,42 @@ def get_homepage_data(email: str = "marina@theinstrumentalist.com") -> Dict[str,
             "badge": None,
         },
     ]
+    lessons = []
 
     instruments: List[Dict[str, Any]] = [
-        {"name": "Violão", "meta": "32 aulas · Iniciante", "icon": "violao"},
-        {"name": "Piano", "meta": "28 aulas · Intermediário", "icon": "piano"},
-        {"name": "Bateria", "meta": "19 aulas · Iniciante", "icon": "bateria"},
-        {"name": "Violino", "meta": "15 aulas · Avançado", "icon": "violino"},
-        {"name": "Ukulele", "meta": "11 aulas · Iniciante", "icon": "ukulele"},
-        {"name": "Canto", "meta": "21 aulas · Todos os níveis", "icon": "canto"},
+        {"name": "Violão", "meta": "Iniciante", "icon": "violao"},
+        {"name": "Piano", "meta": "Intermediário", "icon": "piano"},
+        {"name": "Bateria", "meta": "Iniciante", "icon": "bateria"},
+        {"name": "Violino", "meta": "Avançado", "icon": "violino"},
+        {"name": "Ukulele", "meta": "Iniciante", "icon": "ukulele"},
+        {"name": "Canto", "meta": "Todos os níveis", "icon": "canto"},
     ]
 
     journey = {
-        "level": 7,
-        "xp_current": 1240,
-        "xp_goal": 1620,
-        "xp_needed": 380,
-        "progress": 72,
-        "streak": 12,
-        "weekly_sequence": [True, True, True, True, True, False, False],
+        "level": 7 if is_demo_user else 1,
+        "xp_current": 1240 if is_demo_user else 0,
+        "xp_goal": 1620 if is_demo_user else 100,
+        "xp_needed": 380 if is_demo_user else 100,
+        "progress": 72 if is_demo_user else 0,
+        "streak": 12 if is_demo_user else 0,
+        "weekly_sequence": [True, True, True, True, True, False, False] if is_demo_user else [False] * 7,
         "badges": [
-            {"name": "Primeira aula", "unlocked": True},
-            {"name": "7 dias seguidos", "unlocked": True},
+            {"name": "Primeira aula", "unlocked": is_demo_user},
+            {"name": "7 dias seguidos", "unlocked": is_demo_user},
             {"name": "30 dias seguidos", "unlocked": False},
             {"name": "3 instrumentos", "unlocked": False},
         ],
         "ranking": [
             {"rank": 1, "name": "Camila R.", "xp": 2180, "avatar": "C"},
-            {"rank": 2, "name": "Marina (você)", "xp": 1240, "avatar": "M", "is_you": True},
+            {"rank": 2 if is_demo_user else 4, "name": f"{user_name} (você)", "xp": 1240 if is_demo_user else 0, "avatar": user_name[:1].upper(), "is_you": True},
             {"rank": 3, "name": "Thiago M.", "xp": 1080, "avatar": "T"},
         ],
     }
 
     stats = [
-        {"label": "dias seguidos", "value": "12", "icon": "flame"},
-        {"label": "XP este mês", "value": "1.240", "icon": "star"},
-        {"label": "Nível", "value": "7", "icon": "medal"},
+        {"label": "dias seguidos", "value": "12" if is_demo_user else "0", "icon": "flame"},
+        {"label": "XP este mês", "value": "1.240" if is_demo_user else "0", "icon": "star"},
+        {"label": "Nível", "value": "7" if is_demo_user else "1", "icon": "medal"},
     ]
 
     return {
@@ -122,7 +118,7 @@ def get_homepage_data(email: str = "marina@theinstrumentalist.com") -> Dict[str,
         "hero": {
             "welcome": "Bem-vindo de volta",
             "greeting": f"Boa noite, {user_name}.",
-            "message": "Você está a duas lições de completar o módulo de Violão Popular. Bora continuar de onde parou?",
+            "message": "Explore os conteúdos disponíveis e escolha seu próximo objetivo musical.",
             "continue_lesson": continue_lesson,
             "stats": stats,
         },

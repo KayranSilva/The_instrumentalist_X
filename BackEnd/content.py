@@ -36,18 +36,6 @@ DEFAULT_CONTENT: List[Dict[str, Any]] = [
         "level": "Intermediário",
         "created_at": "2026-08-28T12:00:00+00:00",
     },
-    {
-        "id": "lesson-1",
-        "type": "aula",
-        "title": "Dedilhado com métrica 6/8",
-        "instrument": "Violão",
-        "description": "Aprenda a manter a pulsação e trocar os baixos com segurança.",
-        "url": "https://www.youtube.com/watch?v=demo2",
-        "teacher": "Rafael Nunes",
-        "duration": "14:20",
-        "level": "Iniciante",
-        "created_at": "2026-08-25T12:00:00+00:00",
-    },
 ]
 
 
