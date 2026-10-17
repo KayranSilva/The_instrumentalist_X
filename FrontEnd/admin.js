@@ -1,19 +1,39 @@
 "use strict";
 (() => {
     "use strict";
-    var _a;
+    var _a, _b;
     const API_URL = window.location.protocol === "file:" ? "http://localhost:8001" : window.location.origin;
-    const keyInput = document.getElementById("adminKey");
+    const USER_KEY = "theInstrumentalistUser";
     const form = document.getElementById("contentForm");
-    const accessForm = document.getElementById("accessForm");
-    const accessKey = document.getElementById("accessKey");
-    const accessGate = document.getElementById("accessGate");
-    const accessFeedback = document.getElementById("accessFeedback");
     const feedback = document.getElementById("formFeedback");
     const list = document.getElementById("contentList");
+    const instrumentSelect = document.getElementById("instrument");
+    const adminIdentity = document.getElementById("adminIdentity");
     let contents = [];
     let activeFilter = "todos";
-    const getKey = () => (keyInput === null || keyInput === void 0 ? void 0 : keyInput.value.trim()) || "";
+    function getUser() {
+        try {
+            const user = JSON.parse(localStorage.getItem(USER_KEY) || "null");
+            return user && typeof user === "object" && "email" in user ? user : null;
+        }
+        catch (_a) {
+            return null;
+        }
+    }
+    function goToLogin() {
+        try {
+            localStorage.removeItem(USER_KEY);
+        }
+        catch ( /* ignore */_a) { /* ignore */ }
+        window.location.href = "login.html";
+    }
+    const user = getUser();
+    if (!user || !user.access_token || (user.role !== "admin" && user.role !== "teacher")) {
+        goToLogin();
+        throw new Error("Acesso restrito a administradores/professores.");
+    }
+    if (adminIdentity)
+        adminIdentity.textContent = user.name || user.email;
     const setFeedback = (message, error = false) => { feedback.textContent = message; feedback.classList.toggle("error", error); };
     const typeLabel = (type) => ({ aula: "Aula", musica: "Música", partitura: "Partitura" }[type]);
     const typeSymbol = (type) => ({ aula: "▶", musica: "♪", partitura: "♫" }[type]);
@@ -29,19 +49,42 @@
     }
     async function request(path, options = {}) {
         const headers = new Headers(options.headers);
-        headers.set("X-Admin-Key", getKey());
+        headers.set("Authorization", `Bearer ${user.access_token}`);
         const response = await fetch(API_URL + path, Object.assign(Object.assign({}, options), { headers }));
+        if (response.status === 401) {
+            goToLogin();
+            throw new Error("Sessão expirada.");
+        }
         const data = await response.json();
         if (!response.ok)
             throw new Error(data.message || "Não foi possível concluir a operação.");
         return data;
     }
-    async function loadContents() {
-        if (!getKey()) {
-            list.innerHTML = '<div class="empty-state"><span>⌐</span><p>Digite a chave de acesso para carregar o catálogo.</p></div>';
-            keyInput === null || keyInput === void 0 ? void 0 : keyInput.focus();
+    async function loadInstruments() {
+        if (!instrumentSelect)
             return;
+        try {
+            const data = await request("/instruments");
+            const instruments = data.instruments || [];
+            const current = instrumentSelect.value;
+            instrumentSelect.innerHTML = '<option value="">Selecione</option>';
+            instruments
+                .slice()
+                .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
+                .forEach((item) => {
+                const option = document.createElement("option");
+                option.value = item.slug;
+                option.textContent = item.name;
+                instrumentSelect.appendChild(option);
+            });
+            if (current)
+                instrumentSelect.value = current;
         }
+        catch (error) {
+            console.error("Não foi possível carregar a lista de instrumentos.", error);
+        }
+    }
+    async function loadContents() {
         try {
             const data = await request("/admin/content");
             contents = data.content || [];
@@ -54,23 +97,7 @@
             list.innerHTML = `<div class="empty-state"><span>!</span><p>${error instanceof Error ? escapeHtml(error.message) : "Não foi possível carregar o catálogo."}</p></div>`;
         }
     }
-    accessForm === null || accessForm === void 0 ? void 0 : accessForm.addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const key = accessKey.value.trim();
-        if (!key)
-            return;
-        keyInput.value = key;
-        accessFeedback.textContent = "Verificando acesso...";
-        try {
-            await request("/admin/content");
-            accessGate.remove();
-            await loadContents();
-        }
-        catch (error) {
-            accessFeedback.textContent = error instanceof Error ? error.message : "Chave de acesso inválida.";
-            accessKey.select();
-        }
-    });
+    (_a = document.getElementById("logoutButton")) === null || _a === void 0 ? void 0 : _a.addEventListener("click", () => { goToLogin(); });
     document.querySelectorAll(".type-option").forEach(button => button.addEventListener("click", () => {
         document.querySelectorAll(".type-option").forEach(item => item.classList.remove("active"));
         button.classList.add("active");
@@ -92,8 +119,7 @@
         document.getElementById("durationField").style.display = type === "partitura" ? "none" : "block";
     }));
     document.querySelectorAll(".filter-button").forEach(button => button.addEventListener("click", () => { document.querySelectorAll(".filter-button").forEach(item => item.classList.remove("active")); button.classList.add("active"); activeFilter = button.dataset.filter || "todos"; renderList(); }));
-    (_a = document.getElementById("refreshBtn")) === null || _a === void 0 ? void 0 : _a.addEventListener("click", loadContents);
-    keyInput === null || keyInput === void 0 ? void 0 : keyInput.addEventListener("change", loadContents);
+    (_b = document.getElementById("refreshBtn")) === null || _b === void 0 ? void 0 : _b.addEventListener("click", loadContents);
     list === null || list === void 0 ? void 0 : list.addEventListener("click", async (event) => { const button = event.target.closest("[data-delete]"); if (!button || !window.confirm("Remover este conteúdo do catálogo?"))
         return; try {
         await request(`/admin/content/${button.dataset.delete}`, { method: "DELETE" });
@@ -115,5 +141,6 @@
     catch (error) {
         setFeedback(error instanceof Error ? error.message : "Não foi possível publicar.", true);
     } });
-    accessKey === null || accessKey === void 0 ? void 0 : accessKey.focus();
+    loadInstruments();
+    loadContents();
 })();

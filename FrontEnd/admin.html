@@ -10,35 +10,24 @@
 <link rel="stylesheet" href="admin.css">
 </head>
 <body>
-<section class="access-gate" id="accessGate" aria-labelledby="accessTitle">
-  <div class="access-card">
-    <span class="access-mark">I</span>
-    <span class="eyebrow">Área restrita</span>
-    <h1 id="accessTitle">Acesso administrativo</h1>
-    <p>Digite a chave de acesso para entrar no painel.</p>
-    <form id="accessForm">
-      <label class="access-field" for="accessKey">Chave de acesso</label>
-      <input id="accessKey" type="password" placeholder="Digite sua chave" autocomplete="current-password" required>
-      <button class="submit-button" type="submit"><span>Entrar no painel</span><b>↗</b></button>
-      <p class="access-feedback" id="accessFeedback" role="alert"></p>
-    </form>
-  </div>
-</section>
 <div class="admin-shell">
   <aside class="sidebar">
     <a class="brand" href="home.html"><span class="brand-mark">I</span><span>The Instrumentalist</span></a>
     <div class="sidebar-label">Workspace</div>
     <nav>
       <a class="nav-item active" href="admin.html"><span class="nav-icon">▦</span> Conteúdos</a>
-      <a class="nav-item" href="home.html?preview=admin"><span class="nav-icon">⌂</span> Visualizar home</a>
+      <a class="nav-item" href="home.html"><span class="nav-icon">⌂</span> Visualizar home</a>
     </nav>
-    <div class="sidebar-footer"><span class="status-dot"></span><span>API conectada</span></div>
+    <div class="sidebar-footer" id="sidebarFooter">
+      <span class="status-dot"></span><span id="adminIdentity">Carregando…</span>
+      <button id="logoutButton" class="nav-item" type="button" style="margin-left:auto; padding:4px 8px;">Sair</button>
+    </div>
   </aside>
 
   <main class="main-content">
     <header class="page-header">
       <div><span class="eyebrow">Painel editorial</span><h1>Conteúdos</h1><p>Publique experiências para a próxima sessão de estudo.</p></div>
-      <div class="admin-access"><label for="adminKey">Chave de acesso</label><input id="adminKey" type="password" placeholder="Digite a chave" autocomplete="off"><button id="refreshBtn" class="icon-button" type="button" aria-label="Atualizar conteúdos" title="Atualizar conteúdos">↻</button></div>
+      <div class="admin-access"><button id="refreshBtn" class="icon-button" type="button" aria-label="Atualizar conteúdos" title="Atualizar conteúdos">↻</button></div>
     </header>
 
     <section class="stats-grid" aria-label="Resumo de conteúdos">
@@ -58,7 +47,7 @@
           </div>
           <input id="contentType" name="type" type="hidden" value="aula">
           <label class="field"><span>Título <i>*</i></span><input id="title" name="title" required placeholder="Ex.: Ritmo e levada de bossa nova"></label>
-          <div class="field-row"><label class="field"><span>Instrumento <i>*</i></span><select id="instrument" name="instrument" required><option value="">Selecione</option><option>Violão</option><option>Piano</option><option>Bateria</option><option>Violino</option><option>Ukulele</option><option>Canto</option></select></label><label class="field"><span>Nível</span><select id="level" name="level"><option>Iniciante</option><option>Intermediário</option><option>Avançado</option></select></label></div>
+          <div class="field-row"><label class="field"><span>Instrumento <i>*</i></span><select id="instrument" name="instrument" required><option value="">Selecione</option></select></label><label class="field"><span>Nível</span><select id="level" name="level"><option>Iniciante</option><option>Intermediário</option><option>Avançado</option></select></label></div>
           <label class="field"><span>Descrição</span><textarea id="description" name="description" rows="3" placeholder="O que o aluno vai encontrar neste conteúdo?"></textarea></label>
           <label class="field" id="resourceField"><span id="urlLabel">Arquivo da aula <i>*</i></span><input id="resource" name="resource" type="file" required accept="video/*,audio/*,.pdf,.png,.jpg,.jpeg"></label>
           <label class="field" id="urlField" style="display:none"><span>Link do conteúdo <i>*</i></span><input id="url" name="url" type="url" placeholder="https://..."></label>

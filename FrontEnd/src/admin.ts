@@ -3,19 +3,40 @@
 
   type ContentType = "aula" | "musica" | "partitura";
   type Content = { id: string; type: ContentType; title: string; instrument: string; description: string; url: string; teacher: string; duration: string; level: string; };
+  type StoredUser = { email: string; name?: string; role?: string; access_token?: string; refresh_token?: string };
+
   const API_URL = window.location.protocol === "file:" ? "http://localhost:8001" : window.location.origin;
-  const keyInput = document.getElementById("adminKey") as HTMLInputElement;
+  const USER_KEY = "theInstrumentalistUser";
+
   const form = document.getElementById("contentForm") as HTMLFormElement;
-  const accessForm = document.getElementById("accessForm") as HTMLFormElement;
-  const accessKey = document.getElementById("accessKey") as HTMLInputElement;
-  const accessGate = document.getElementById("accessGate") as HTMLElement;
-  const accessFeedback = document.getElementById("accessFeedback") as HTMLParagraphElement;
   const feedback = document.getElementById("formFeedback") as HTMLParagraphElement;
   const list = document.getElementById("contentList") as HTMLDivElement;
+  const instrumentSelect = document.getElementById("instrument") as HTMLSelectElement | null;
+  const adminIdentity = document.getElementById("adminIdentity");
   let contents: Content[] = [];
   let activeFilter = "todos";
 
-  const getKey = () => keyInput?.value.trim() || "";
+  function getUser(): StoredUser | null {
+    try {
+      const user: unknown = JSON.parse(localStorage.getItem(USER_KEY) || "null");
+      return user && typeof user === "object" && "email" in user ? user as StoredUser : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function goToLogin(): void {
+    try { localStorage.removeItem(USER_KEY); } catch { /* ignore */ }
+    window.location.href = "login.html";
+  }
+
+  const user = getUser();
+  if (!user || !user.access_token || (user.role !== "admin" && user.role !== "teacher")) {
+    goToLogin();
+    throw new Error("Acesso restrito a administradores/professores.");
+  }
+  if (adminIdentity) adminIdentity.textContent = user.name || user.email;
+
   const setFeedback = (message: string, error = false) => { feedback.textContent = message; feedback.classList.toggle("error", error); };
   const typeLabel = (type: ContentType) => ({ aula: "Aula", musica: "Música", partitura: "Partitura" }[type]);
   const typeSymbol = (type: ContentType) => ({ aula: "▶", musica: "♪", partitura: "♫" }[type]);
@@ -29,32 +50,51 @@
   }
 
   async function request(path: string, options: RequestInit = {}) {
-    const headers = new Headers(options.headers); headers.set("X-Admin-Key", getKey());
+    const headers = new Headers(options.headers);
+    headers.set("Authorization", `Bearer ${user!.access_token}`);
     const response = await fetch(API_URL + path, { ...options, headers });
-    const data = await response.json(); if (!response.ok) throw new Error(data.message || "Não foi possível concluir a operação."); return data;
+    if (response.status === 401) { goToLogin(); throw new Error("Sessão expirada."); }
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || "Não foi possível concluir a operação.");
+    return data;
+  }
+
+  async function loadInstruments(): Promise<void> {
+    if (!instrumentSelect) return;
+    try {
+      const data = await request("/instruments");
+      const instruments: Array<{ slug: string; name: string }> = data.instruments || [];
+      const current = instrumentSelect.value;
+      instrumentSelect.innerHTML = '<option value="">Selecione</option>';
+      instruments
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
+        .forEach((item) => {
+          const option = document.createElement("option");
+          option.value = item.slug;
+          option.textContent = item.name;
+          instrumentSelect.appendChild(option);
+        });
+      if (current) instrumentSelect.value = current;
+    } catch (error) {
+      console.error("Não foi possível carregar a lista de instrumentos.", error);
+    }
   }
 
   async function loadContents() {
-    if (!getKey()) { list.innerHTML = '<div class="empty-state"><span>⌐</span><p>Digite a chave de acesso para carregar o catálogo.</p></div>'; keyInput?.focus(); return; }
-    try { const data = await request("/admin/content"); contents = data.content || []; renderList(); document.getElementById("totalCount")!.textContent = String(contents.length); document.getElementById("lessonCount")!.textContent = String(contents.filter(item => item.type === "aula").length); document.getElementById("materialCount")!.textContent = String(contents.filter(item => item.type !== "aula").length); }
-    catch (error) { list.innerHTML = `<div class="empty-state"><span>!</span><p>${error instanceof Error ? escapeHtml(error.message) : "Não foi possível carregar o catálogo."}</p></div>`; }
+    try {
+      const data = await request("/admin/content");
+      contents = data.content || [];
+      renderList();
+      document.getElementById("totalCount")!.textContent = String(contents.length);
+      document.getElementById("lessonCount")!.textContent = String(contents.filter(item => item.type === "aula").length);
+      document.getElementById("materialCount")!.textContent = String(contents.filter(item => item.type !== "aula").length);
+    } catch (error) {
+      list.innerHTML = `<div class="empty-state"><span>!</span><p>${error instanceof Error ? escapeHtml(error.message) : "Não foi possível carregar o catálogo."}</p></div>`;
+    }
   }
 
-  accessForm?.addEventListener("submit", async event => {
-    event.preventDefault();
-    const key = accessKey.value.trim();
-    if (!key) return;
-    keyInput.value = key;
-    accessFeedback.textContent = "Verificando acesso...";
-    try {
-      await request("/admin/content");
-      accessGate.remove();
-      await loadContents();
-    } catch (error) {
-      accessFeedback.textContent = error instanceof Error ? error.message : "Chave de acesso inválida.";
-      accessKey.select();
-    }
-  });
+  document.getElementById("logoutButton")?.addEventListener("click", () => { goToLogin(); });
 
   document.querySelectorAll<HTMLButtonElement>(".type-option").forEach(button => button.addEventListener("click", () => {
     document.querySelectorAll(".type-option").forEach(item => item.classList.remove("active")); button.classList.add("active");
@@ -76,8 +116,9 @@
   }));
   document.querySelectorAll<HTMLButtonElement>(".filter-button").forEach(button => button.addEventListener("click", () => { document.querySelectorAll(".filter-button").forEach(item => item.classList.remove("active")); button.classList.add("active"); activeFilter = button.dataset.filter || "todos"; renderList(); }));
   document.getElementById("refreshBtn")?.addEventListener("click", loadContents);
-  keyInput?.addEventListener("change", loadContents);
   list?.addEventListener("click", async event => { const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-delete]"); if (!button || !window.confirm("Remover este conteúdo do catálogo?")) return; try { await request(`/admin/content/${button.dataset.delete}`, { method: "DELETE" }); await loadContents(); } catch (error) { setFeedback(error instanceof Error ? error.message : "Não foi possível remover o conteúdo.", true); } });
   form?.addEventListener("submit", async event => { event.preventDefault(); setFeedback(""); if (!form.checkValidity()) { form.reportValidity(); return; } const payload = new FormData(form); payload.set("type", (document.getElementById("contentType") as HTMLInputElement).value); try { await request("/admin/content", { method: "POST", body: payload }); form.reset(); document.querySelector<HTMLButtonElement>(".type-option[data-type='aula']")?.click(); setFeedback("Conteúdo publicado com sucesso."); await loadContents(); } catch (error) { setFeedback(error instanceof Error ? error.message : "Não foi possível publicar.", true); } });
-  accessKey?.focus();
+
+  loadInstruments();
+  loadContents();
 })();
