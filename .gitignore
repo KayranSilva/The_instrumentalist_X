@@ -1,0 +1,22 @@
+# Ambiente / segredos
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Node
+node_modules/
+
+# Uploads enviados pelo painel (se algum dia voltarem a ficar em disco local)
+FrontEnd/uploads/
+
+# Cache local da CLI do Supabase
+supabase/.temp/
+
+# Editor / SO
+.DS_Store
+Thumbs.db
