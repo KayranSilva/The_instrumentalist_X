@@ -2,7 +2,6 @@ import json
 import os
 import re
 import mimetypes
-import uuid
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from email import policy
@@ -11,12 +10,13 @@ from pathlib import Path
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any, Dict
 
-from content import create_content, delete_content, is_admin_key_valid, list_content
+import supabase_client
+from supabase_client import SupabaseError, bearer_token_from_header
+from content import create_content, delete_content, list_content
 from homepage import get_homepage_data
 
-
-SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
-SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
+SUPABASE_URL = supabase_client.SUPABASE_URL
+SUPABASE_ANON_KEY = supabase_client.SUPABASE_ANON_KEY
 
 
 def validate_email(email: str) -> bool:
@@ -109,6 +109,19 @@ def authenticate_user(email: str, password: str, remember: bool = False) -> Dict
     user = details.get("user") or {}
     metadata = user.get("user_metadata") or {}
     name = metadata.get("name") or normalized_email.split("@", 1)[0].capitalize()
+    access_token = details.get("access_token")
+
+    role = "student"
+    if access_token:
+        try:
+            profiles = supabase_client.rest_select(
+                "profiles", access_token, {"select": "display_name,role", "id": f"eq.{user.get('id', '')}"}
+            )
+            if profiles:
+                name = profiles[0].get("display_name") or name
+                role = profiles[0].get("role") or role
+        except SupabaseError:
+            pass  # login continua válido mesmo se não conseguirmos ler o papel agora
 
     return {
         "success": True,
@@ -116,8 +129,9 @@ def authenticate_user(email: str, password: str, remember: bool = False) -> Dict
         "user": {
             "email": normalized_email,
             "name": name,
+            "role": role,
             "remember": remember,
-            "access_token": details.get("access_token"),
+            "access_token": access_token,
             "refresh_token": details.get("refresh_token"),
         },
     }
@@ -140,6 +154,68 @@ def recover_account(email: str) -> Dict[str, object]:
     }
 
 
+VALID_SKILL_LEVELS = {"beginner", "intermediate", "advanced"}
+
+
+def list_instruments() -> tuple[Dict[str, object], int]:
+    """Lista os instrumentos disponíveis (usado no seletor do cadastro)."""
+    try:
+        rows = supabase_client.rest_select("instruments", None, {"select": "id,name,slug,icon", "order": "name.asc"})
+    except SupabaseError as error:
+        return {"success": False, "message": error.message}, error.status
+    return {"success": True, "instruments": rows}, 200
+
+
+def set_primary_instrument(token: str, instrument_slug: str) -> tuple[Dict[str, object], int]:
+    """Define o instrumento principal do usuário autenticado.
+
+    Não remove o acesso a outros instrumentos: apenas marca qual é o
+    principal (is_primary) em profile_instruments. O usuário continua
+    podendo ter outras linhas nessa tabela.
+    """
+    slug = (instrument_slug or "").strip().lower()
+    if not slug:
+        return {"success": False, "message": "Escolha um instrumento."}, 400
+
+    try:
+        user = supabase_client.get_auth_user(token)
+        user_id = user["id"]
+
+        matches = supabase_client.rest_select("instruments", token, {"select": "id", "slug": f"eq.{slug}"})
+        if not matches:
+            return {"success": False, "message": "Instrumento inválido."}, 400
+        instrument_id = matches[0]["id"]
+
+        supabase_client.rest_update(
+            "profile_instruments",
+            token,
+            {"profile_id": f"eq.{user_id}", "instrument_id": f"neq.{instrument_id}"},
+            {"is_primary": False},
+        )
+        supabase_client.rest_upsert(
+            "profile_instruments",
+            token,
+            [{"profile_id": user_id, "instrument_id": instrument_id, "is_primary": True}],
+            on_conflict="profile_id,instrument_id",
+        )
+    except SupabaseError as error:
+        return {"success": False, "message": error.message}, error.status
+
+    return {"success": True, "message": "Instrumento principal atualizado."}, 200
+
+
+def refresh_tokens(refresh_token: str) -> tuple[Dict[str, object], int]:
+    try:
+        session = supabase_client.refresh_session(refresh_token)
+    except SupabaseError as error:
+        return {"success": False, "message": error.message}, error.status
+    return {
+        "success": True,
+        "access_token": session.get("access_token"),
+        "refresh_token": session.get("refresh_token"),
+    }, 200
+
+
 class LoginRequestHandler(BaseHTTPRequestHandler):
     """Servidor mínimo para receber as requisições do formulário."""
 
@@ -154,13 +230,12 @@ class LoginRequestHandler(BaseHTTPRequestHandler):
         ".svg": "image/svg+xml",
     }
     MAX_UPLOAD_SIZE = 100 * 1024 * 1024
-    UPLOAD_EXTENSIONS = {".mp4", ".webm", ".mov", ".mp3", ".wav", ".ogg", ".pdf", ".png", ".jpg", ".jpeg"}
 
     def do_OPTIONS(self):
         self.send_response(200)
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Admin-Key")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
         self.end_headers()
 
     def _send_json(self, response: Dict[str, object], status: int = 200):
@@ -169,16 +244,22 @@ class LoginRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Admin-Key")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
 
-    def _require_admin(self) -> bool:
-        if is_admin_key_valid(self.headers.get("X-Admin-Key", "")):
-            return True
-        self._send_json({"success": False, "message": "Acesso administrativo não autorizado."}, 401)
-        return False
+    def _bearer_token(self) -> str:
+        return bearer_token_from_header(self.headers.get("Authorization", ""))
+
+    def _require_admin_token(self) -> str:
+        """Exige uma sessão Supabase válida; quem decide se é admin/professor
+        de verdade é o RLS do banco (is_admin_or_teacher()) em cada operação."""
+        token = self._bearer_token()
+        if not token:
+            self._send_json({"success": False, "message": "Faça login como administrador."}, 401)
+            return ""
+        return token
 
     def _read_request_body(self) -> bytes:
         if self.headers.get("Transfer-Encoding", "").lower() != "chunked":
@@ -201,17 +282,22 @@ class LoginRequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/admin/content":
-            if not self._require_admin():
+            token = self._require_admin_token()
+            if not token:
                 return
-            self._send_json({"success": True, "content": list_content()})
+            response, status = list_content(token)
+            self._send_json(response, status)
+            return
+
+        if self.path == "/instruments":
+            response, status = list_instruments()
+            self._send_json(response, status)
             return
 
         requested_path = self.path.split("?", 1)[0]
         relative_path = "admin.html" if requested_path in {"", "/"} else requested_path.lstrip("/")
         file_path = (self.FRONTEND_DIR / relative_path).resolve()
-        if requested_path.startswith("/uploads/"):
-            file_path = (self.FRONTEND_DIR / requested_path.lstrip("/")).resolve()
-        allowed_static = file_path.suffix in self.STATIC_TYPES or requested_path.startswith("/uploads/")
+        allowed_static = file_path.suffix in self.STATIC_TYPES
         if self.FRONTEND_DIR not in file_path.parents or not allowed_static or not file_path.is_file():
             self._send_json({"success": False, "message": "Arquivo não encontrado."}, 404)
             return
@@ -260,34 +346,25 @@ class LoginRequestHandler(BaseHTTPRequestHandler):
             response = recover_account(payload.get("email", ""))
             status = 200 if response["success"] else 404
         elif self.path == "/homepage":
-            email = payload.get("email", "")
-            if not email:
+            token = self._bearer_token()
+            if not token:
                 self._send_json({"success": False, "message": "Usuário não autenticado."}, 401)
                 return
-            response = get_homepage_data(email)
-            status = 200 if response.get("success") else 500
-        elif self.path == "/admin/content":
-            if not self._require_admin():
+            response = get_homepage_data(token)
+            status = 200 if response.get("success") else int(response.pop("status", 500) or 500)
+        elif self.path == "/profile/instrument":
+            token = self._bearer_token()
+            if not token:
+                self._send_json({"success": False, "message": "Usuário não autenticado."}, 401)
                 return
-            if payload.get("type") in {"aula", "partitura"}:
-                if not upload or not upload[0]:
-                    message = "Selecione um arquivo PDF para a partitura." if payload.get("type") == "partitura" else "Selecione um arquivo para a aula."
-                    self._send_json({"success": False, "message": message}, 400)
-                    return
-                extension = Path(upload[0]).suffix.lower()
-                if extension not in self.UPLOAD_EXTENSIONS:
-                    self._send_json({"success": False, "message": "Formato de arquivo não permitido."}, 400)
-                    return
-                if payload.get("type") == "partitura" and extension != ".pdf":
-                    self._send_json({"success": False, "message": "A partitura deve estar em formato PDF."}, 400)
-                    return
-                upload_name = f"{uuid.uuid4().hex}{extension}"
-                upload_dir = self.FRONTEND_DIR / "uploads"
-                upload_dir.mkdir(parents=True, exist_ok=True)
-                (upload_dir / upload_name).write_bytes(upload[1])
-                payload["url"] = f"/uploads/{upload_name}"
-            response = create_content(payload)
-            status = 201 if response.get("success") else 400
+            response, status = set_primary_instrument(token, payload.get("instrument_slug", ""))
+        elif self.path == "/refresh":
+            response, status = refresh_tokens(payload.get("refresh_token", ""))
+        elif self.path == "/admin/content":
+            token = self._require_admin_token()
+            if not token:
+                return
+            response, status = create_content(token, payload, upload)
         else:
             response = {"success": False, "message": "Rota não encontrada."}
             status = 404
@@ -295,14 +372,15 @@ class LoginRequestHandler(BaseHTTPRequestHandler):
         self._send_json(response, status)
 
     def do_DELETE(self):
-        if not self._require_admin():
+        token = self._require_admin_token()
+        if not token:
             return
         prefix = "/admin/content/"
         if not self.path.startswith(prefix):
             self._send_json({"success": False, "message": "Rota não encontrada."}, 404)
             return
-        response = delete_content(self.path[len(prefix):])
-        self._send_json(response, 200 if response["success"] else 404)
+        response, status = delete_content(token, self.path[len(prefix):])
+        self._send_json(response, status)
 
     def log_message(self, format, *args):
         return
