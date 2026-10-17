@@ -2,6 +2,7 @@
   "use strict";
 
   const API_URL = window.location.protocol === "file:" ? "http://localhost:8001" : window.location.origin;
+  const PENDING_INSTRUMENT_KEY = "theInstrumentalistPendingInstrument";
   const toggleBtn = document.getElementById("togglePassword");
   const passwordInput = document.getElementById("password") as HTMLInputElement | null;
   const loginForm = document.getElementById("loginForm") as HTMLFormElement | null;
@@ -11,6 +12,22 @@
 
   function isValidEmail(value: string): boolean { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value); }
   function showError(element: HTMLElement | null, message: string): void { if (element) element.textContent = message; }
+
+  async function savePendingInstrument(accessToken: string | undefined): Promise<void> {
+    let instrumentSlug: string | null = null;
+    try { instrumentSlug = localStorage.getItem(PENDING_INSTRUMENT_KEY); } catch { return; }
+    if (!instrumentSlug || !accessToken) return;
+    try {
+      const response = await fetch(`${API_URL}/profile/instrument`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ instrument_slug: instrumentSlug }),
+      });
+      if (response.ok) { try { localStorage.removeItem(PENDING_INSTRUMENT_KEY); } catch { /* ignore */ } }
+    } catch (requestError) {
+      console.error("Não foi possível salvar o instrumento escolhido no cadastro.", requestError);
+    }
+  }
 
   toggleBtn?.addEventListener("click", () => {
     if (!passwordInput) return;
@@ -34,10 +51,12 @@
 
     try {
       const response = await fetch(`${API_URL}/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password: passwordInput.value, remember: (document.getElementById("remember") as HTMLInputElement | null)?.checked || false }) });
-      const data = await response.json() as { success?: boolean; message?: string; user?: { email: string; name: string } };
+      const data = await response.json() as { success?: boolean; message?: string; user?: { email: string; name: string; role?: string; access_token?: string } };
       if (response.ok && data.success) {
         if (data.user) localStorage.setItem("theInstrumentalistUser", JSON.stringify(data.user));
-        window.location.href = "home.html";
+        await savePendingInstrument(data.user?.access_token);
+        const isStaff = data.user?.role === "admin" || data.user?.role === "teacher";
+        window.location.href = isStaff ? "admin.html" : "home.html";
       } else if (data.message) {
         showError(data.message.toLowerCase().includes("e-mail") ? emailError : passwordError, data.message);
       }

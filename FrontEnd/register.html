@@ -29,6 +29,15 @@
         <div class="field"><label for="email">E-mail</label><div class="input-shell"><input type="email" id="email" name="email" placeholder="voce@exemplo.com" autocomplete="email" required></div><span class="field-error" id="emailError"></span></div>
         <div class="field"><label for="password">Senha</label><div class="input-shell"><input type="password" id="password" name="password" placeholder="Pelo menos 6 caracteres" autocomplete="new-password" required minlength="6"></div><span class="field-error" id="passwordError"></span></div>
         <div class="field"><label for="confirmPassword">Confirmar senha</label><div class="input-shell"><input type="password" id="confirmPassword" name="confirmPassword" placeholder="Digite a senha novamente" autocomplete="new-password" required minlength="6"></div><span class="field-error" id="confirmPasswordError"></span></div>
+        <div class="field">
+          <label for="instrument">Qual seu objetivo principal?</label>
+          <div class="input-shell">
+            <select id="instrument" name="instrument" required>
+              <option value="" disabled selected>Carregando instrumentos…</option>
+            </select>
+          </div>
+          <span class="field-error" id="instrumentError"></span>
+        </div>
         <button type="submit" class="btn-primary">Criar conta</button>
         <p class="form-status" id="formStatus" role="status"></p>
       </form>

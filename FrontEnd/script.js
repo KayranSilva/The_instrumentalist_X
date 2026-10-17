@@ -1,8 +1,9 @@
 "use strict";
 (() => {
     "use strict";
-    var _a, _b, _c, _d;
+    var _a, _b, _c;
     const API_URL = window.location.protocol === "file:" ? "http://localhost:8001" : window.location.origin;
+    const PENDING_INSTRUMENT_KEY = "theInstrumentalistPendingInstrument";
     const toggleBtn = document.getElementById("togglePassword");
     const passwordInput = document.getElementById("password");
     const loginForm = document.getElementById("loginForm");
@@ -12,6 +13,33 @@
     function isValidEmail(value) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value); }
     function showError(element, message) { if (element)
         element.textContent = message; }
+    async function savePendingInstrument(accessToken) {
+        let instrumentSlug = null;
+        try {
+            instrumentSlug = localStorage.getItem(PENDING_INSTRUMENT_KEY);
+        }
+        catch (_a) {
+            return;
+        }
+        if (!instrumentSlug || !accessToken)
+            return;
+        try {
+            const response = await fetch(`${API_URL}/profile/instrument`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+                body: JSON.stringify({ instrument_slug: instrumentSlug }),
+            });
+            if (response.ok) {
+                try {
+                    localStorage.removeItem(PENDING_INSTRUMENT_KEY);
+                }
+                catch ( /* ignore */_b) { /* ignore */ }
+            }
+        }
+        catch (requestError) {
+            console.error("Não foi possível salvar o instrumento escolhido no cadastro.", requestError);
+        }
+    }
     toggleBtn === null || toggleBtn === void 0 ? void 0 : toggleBtn.addEventListener("click", () => {
         if (!passwordInput)
             return;
@@ -21,7 +49,7 @@
         toggleBtn.setAttribute("aria-label", isPassword ? "Ocultar senha" : "Mostrar senha");
     });
     loginForm === null || loginForm === void 0 ? void 0 : loginForm.addEventListener("submit", async (event) => {
-        var _a;
+        var _a, _b, _c, _d;
         event.preventDefault();
         if (!emailInput || !passwordInput)
             return;
@@ -53,7 +81,9 @@
             if (response.ok && data.success) {
                 if (data.user)
                     localStorage.setItem("theInstrumentalistUser", JSON.stringify(data.user));
-                window.location.href = "home.html";
+                await savePendingInstrument((_b = data.user) === null || _b === void 0 ? void 0 : _b.access_token);
+                const isStaff = ((_c = data.user) === null || _c === void 0 ? void 0 : _c.role) === "admin" || ((_d = data.user) === null || _d === void 0 ? void 0 : _d.role) === "teacher";
+                window.location.href = isStaff ? "admin.html" : "home.html";
             }
             else if (data.message) {
                 showError(data.message.toLowerCase().includes("e-mail") ? emailError : passwordError, data.message);
@@ -88,7 +118,7 @@
         lastFocused.focus(); }
     (_a = document.getElementById("forgotPasswordBtn")) === null || _a === void 0 ? void 0 : _a.addEventListener("click", () => openModal("password"));
     (_b = document.getElementById("forgotLoginBtn")) === null || _b === void 0 ? void 0 : _b.addEventListener("click", () => openModal("login"));
-    (_d = document.getElementById("modalClose")) === null || _d === void 0 ? void 0 : _d.addEventListener("click", closeModal);
+    (_c = document.getElementById("modalClose")) === null || _c === void 0 ? void 0 : _c.addEventListener("click", closeModal);
     overlay === null || overlay === void 0 ? void 0 : overlay.addEventListener("click", (event) => { if (event.target === overlay)
         closeModal(); });
     document.addEventListener("keydown", (event) => { if (event.key === "Escape" && (overlay === null || overlay === void 0 ? void 0 : overlay.classList.contains("open")))
