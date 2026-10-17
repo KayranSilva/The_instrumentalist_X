@@ -480,6 +480,38 @@ a:focus-visible, button:focus-visible, input:focus-visible{
 }
 
 /* ---------- Lesson cards ---------- */
+.lesson-group{
+  margin-bottom:32px;
+}
+.lesson-group:last-child{
+  margin-bottom:0;
+}
+
+.lesson-group-head{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:14px;
+}
+
+.lesson-group-head h3{
+  font-size:18px;
+  color:var(--violet-900);
+}
+
+.lesson-group-tag{
+  font-size:11.5px;
+  font-weight:700;
+  letter-spacing:.02em;
+  text-transform:uppercase;
+  color:var(--violet-700);
+  background:var(--lavender-100);
+  border-radius:999px;
+  padding:4px 10px;
+}
+
+.lesson-group.is-hidden{display:none;}
+
 .lesson-row{
   display:grid;
   grid-template-columns:repeat(auto-fit, minmax(min(100%, 220px), 1fr));
