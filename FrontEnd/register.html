@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Instrumentalist — Criar conta</title>
+<meta name="description" content="Crie sua conta gratuita e comece a aprender seu instrumento com aulas em vídeo.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -18,24 +19,50 @@
       <h1>Aprenda no seu ritmo, com espaço para cada instrumento.</h1>
       <p>Crie sua conta para acompanhar aulas, registrar sua prática e continuar evoluindo de onde parou.</p>
     </div>
-    <div class="stage-figure" aria-hidden="true"><img src="music.png" alt="Ilustração de música"></div>
-    <div class="stage-stats"><div class="stat"><b>12k+</b><span>alunos ativos</span></div><div class="stat"><b>98%</b><span>satisfação</span></div><div class="stat"><b>24/7</b><span>aprendizado</span></div></div>
+    <div class="stage-figure" aria-hidden="true"><img src="music.png" alt=""></div>
+    <div class="stage-stats">
+      <div class="stat"><b>Grátis</b><span>para começar</span></div>
+      <div class="stat"><b>8</b><span>instrumentos</span></div>
+      <div class="stat"><b>XP</b><span>a cada aula</span></div>
+    </div>
   </section>
   <section class="panel">
-    <div class="form-wrap">
-      <div class="form-head"><h2>Criar sua conta</h2><p>Preencha seus dados para começar a aprender.</p></div>
-      <form id="registerForm" novalidate>
-        <div class="field"><label for="name">Nome</label><div class="input-shell"><input type="text" id="name" name="name" placeholder="Como podemos chamar você?" autocomplete="name" required maxlength="80"></div><span class="field-error" id="nameError"></span></div>
-        <div class="field"><label for="email">E-mail</label><div class="input-shell"><input type="email" id="email" name="email" placeholder="voce@exemplo.com" autocomplete="email" required></div><span class="field-error" id="emailError"></span></div>
-        <div class="field"><label for="password">Senha</label><div class="input-shell"><input type="password" id="password" name="password" placeholder="Pelo menos 6 caracteres" autocomplete="new-password" required minlength="6"></div><span class="field-error" id="passwordError"></span></div>
-        <div class="field"><label for="confirmPassword">Confirmar senha</label><div class="input-shell"><input type="password" id="confirmPassword" name="confirmPassword" placeholder="Digite a senha novamente" autocomplete="new-password" required minlength="6"></div><span class="field-error" id="confirmPasswordError"></span></div>
-        <button type="submit" class="btn-primary">Criar conta</button>
-        <p class="form-status" id="formStatus" role="status"></p>
-      </form>
-      <p class="signup-hint">Já tem uma conta? <a class="link-btn" href="login.html">Entrar</a></p>
+    <div class="form-wrap form-wrap--wide">
+      <div id="registerArea">
+        <div class="form-head"><h2>Criar sua conta</h2><p>Leva menos de um minuto.</p></div>
+        <form id="registerForm" novalidate>
+          <div class="field"><label for="name">Nome</label><div class="input-shell"><input type="text" id="name" name="name" placeholder="Como podemos chamar você?" autocomplete="name" required minlength="2" maxlength="80"></div><span class="field-error" id="nameError"></span></div>
+          <div class="field"><label for="email">E-mail</label><div class="input-shell"><input type="email" id="email" name="email" placeholder="voce@exemplo.com" autocomplete="email" required></div><span class="field-error" id="emailError"></span></div>
+          <div class="field-pair">
+            <div class="field"><label for="password">Senha</label><div class="input-shell"><input type="password" id="password" name="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password" required minlength="6" maxlength="72"></div><span class="field-error" id="passwordError"></span></div>
+            <div class="field"><label for="confirmPassword">Confirmar senha</label><div class="input-shell"><input type="password" id="confirmPassword" name="confirmPassword" placeholder="Repita a senha" autocomplete="new-password" required minlength="6" maxlength="72"></div><span class="field-error" id="confirmPasswordError"></span></div>
+          </div>
+          <fieldset class="field instrument-field">
+            <legend>Qual instrumento você quer aprender primeiro?</legend>
+            <p class="field-hint">Você pode explorar todos os outros depois.</p>
+            <div class="instrument-options" id="instrumentOptions" role="radiogroup" aria-label="Instrumento principal">
+              <span class="instrument-loading">Carregando instrumentos…</span>
+            </div>
+            <span class="field-error" id="instrumentError"></span>
+          </fieldset>
+          <button type="submit" class="btn-primary" id="registerSubmit">Criar conta</button>
+        </form>
+        <p class="signup-hint">Já tem uma conta? <a class="link-btn" href="login.html">Entrar</a></p>
+      </div>
+
+      <div class="confirm-panel" id="confirmPanel" hidden>
+        <div class="confirm-icon" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h15A1.5 1.5 0 0 1 21 6.5v11a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-11Z"/><path d="M4 6.5 12 13l8-6.5"/></svg>
+        </div>
+        <h2>Confirme seu e-mail</h2>
+        <p>Enviamos um link de confirmação para <b id="confirmEmail"></b>. Abra o e-mail e clique no link para ativar sua conta.</p>
+        <p class="field-hint">Não chegou? Confira a caixa de spam ou promoções.</p>
+        <a class="btn-primary btn-link" href="login.html">Ir para o login</a>
+      </div>
     </div>
   </section>
 </div>
+<script src="session.js"></script>
 <script src="register.js"></script>
 </body>
 </html>

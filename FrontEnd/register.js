@@ -1,25 +1,61 @@
 "use strict";
 (() => {
-    const API_URL = window.location.protocol === "file:" ? "http://localhost:8001" : window.location.origin;
+    "use strict";
     const form = document.getElementById("registerForm");
     const nameInput = document.getElementById("name");
     const emailInput = document.getElementById("email");
     const passwordInput = document.getElementById("password");
     const confirmInput = document.getElementById("confirmPassword");
-    const status = document.getElementById("formStatus");
-    function error(id, message) { const element = document.getElementById(id); if (element) element.textContent = message; }
+    const optionsContainer = document.getElementById("instrumentOptions");
+    const submitButton = document.getElementById("registerSubmit");
+    const FIELD_ERRORS = {
+        name: "nameError", email: "emailError", password: "passwordError", instrument: "instrumentError",
+    };
+    function error(id, message) {
+        const element = document.getElementById(id);
+        if (element)
+            element.textContent = message;
+    }
     function validEmail(value) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value); }
+    function selectedInstrument() {
+        var _a;
+        return ((_a = document.querySelector('input[name="instrument"]:checked')) === null || _a === void 0 ? void 0 : _a.value) || "";
+    }
+    async function renderInstruments() {
+        if (!optionsContainer)
+            return;
+        const instruments = (await AppSession.loadInstruments())
+            .slice()
+            .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+        optionsContainer.replaceChildren(...instruments.map((item) => {
+            const label = document.createElement("label");
+            label.className = "instrument-option";
+            label.innerHTML = `<input type="radio" name="instrument" value="${AppSession.escapeHtml(item.slug)}" required>`
+                + `<span class="instrument-option-icon">${AppSession.instrumentIcon(item.slug, 22)}</span>`
+                + `<span class="instrument-option-name">${AppSession.escapeHtml(item.name)}</span>`;
+            return label;
+        }));
+        optionsContainer.addEventListener("change", () => error("instrumentError", ""));
+    }
+    function showConfirmation(email) {
+        var _a;
+        (_a = document.getElementById("registerArea")) === null || _a === void 0 ? void 0 : _a.setAttribute("hidden", "");
+        const panel = document.getElementById("confirmPanel");
+        const target = document.getElementById("confirmEmail");
+        if (target)
+            target.textContent = email;
+        panel === null || panel === void 0 ? void 0 : panel.removeAttribute("hidden");
+    }
     form === null || form === void 0 ? void 0 : form.addEventListener("submit", async (event) => {
         event.preventDefault();
-        if (!nameInput || !emailInput || !passwordInput || !confirmInput)
+        if (!nameInput || !emailInput || !passwordInput || !confirmInput || !submitButton)
             return;
-        ["nameError", "emailError", "passwordError", "confirmPasswordError"].forEach((id) => error(id, ""));
-        if (status)
-            status.textContent = "";
+        ["nameError", "emailError", "passwordError", "confirmPasswordError", "instrumentError"].forEach((id) => error(id, ""));
         const name = nameInput.value.trim();
         const email = emailInput.value.trim();
+        const instrumentSlug = selectedInstrument();
         let valid = true;
-        if (!name) {
+        if (name.length < 2) {
             error("nameError", "Informe seu nome.");
             valid = false;
         }
@@ -31,31 +67,44 @@
             error("passwordError", "A senha deve ter pelo menos 6 caracteres.");
             valid = false;
         }
-        if (passwordInput.value !== confirmInput.value) {
+        else if (passwordInput.value !== confirmInput.value) {
             error("confirmPasswordError", "As senhas não coincidem.");
+            valid = false;
+        }
+        if (!instrumentSlug) {
+            error("instrumentError", "Escolha um instrumento.");
             valid = false;
         }
         if (!valid)
             return;
+        submitButton.disabled = true;
+        submitButton.textContent = "Criando conta…";
         try {
-            const response = await fetch(`${API_URL}/register`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, password: passwordInput.value }) });
-            const data = await response.json();
-            if (!response.ok || !data.success) {
-                error((data.message || "").toLowerCase().includes("e-mail") ? "emailError" : "passwordError", data.message || "Não foi possível criar a conta.");
+            const data = await AppSession.api("/register", {
+                method: "POST",
+                auth: false,
+                json: {
+                    name, email, password: passwordInput.value, instrument_slug: instrumentSlug,
+                    redirect_to: `${AppSession.API_URL}/login.html`,
+                },
+            });
+            if (data.user && !data.requires_confirmation) {
+                AppSession.saveUser(data.user, true);
+                window.location.replace("home.html");
                 return;
             }
-            if (data.user)
-                localStorage.setItem("theInstrumentalistUser", JSON.stringify(data.user));
-            if (status)
-                status.textContent = data.message || "Conta criada com sucesso.";
-            if (data.user)
-                window.setTimeout(() => { window.location.href = "home.html"; }, 700);
-            else
-                window.setTimeout(() => { window.location.href = "login.html"; }, 1800);
+            showConfirmation(email);
         }
         catch (requestError) {
-            error("passwordError", "Não foi possível conectar ao servidor.");
-            console.error(requestError);
+            const apiError = requestError instanceof AppApiError ? requestError : null;
+            error(FIELD_ERRORS[(apiError === null || apiError === void 0 ? void 0 : apiError.field) || ""] || "passwordError", (apiError === null || apiError === void 0 ? void 0 : apiError.message) || "Não foi possível criar a conta.");
+            submitButton.disabled = false;
+            submitButton.textContent = "Criar conta";
         }
     });
+    if (AppSession.getUser()) {
+        window.location.replace("home.html");
+        return;
+    }
+    renderInstruments();
 })();

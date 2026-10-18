@@ -10,72 +10,126 @@
 <link rel="stylesheet" href="admin.css">
 </head>
 <body>
-<section class="access-gate" id="accessGate" aria-labelledby="accessTitle">
-  <div class="access-card">
-    <span class="access-mark">I</span>
-    <span class="eyebrow">Área restrita</span>
-    <h1 id="accessTitle">Acesso administrativo</h1>
-    <p>Digite a chave de acesso para entrar no painel.</p>
-    <form id="accessForm">
-      <label class="access-field" for="accessKey">Chave de acesso</label>
-      <input id="accessKey" type="password" placeholder="Digite sua chave" autocomplete="current-password" required>
-      <button class="submit-button" type="submit"><span>Entrar no painel</span><b>↗</b></button>
-      <p class="access-feedback" id="accessFeedback" role="alert"></p>
-    </form>
-  </div>
-</section>
 <div class="admin-shell">
   <aside class="sidebar">
-    <a class="brand" href="home.html"><span class="brand-mark">I</span><span>The Instrumentalist</span></a>
+    <a class="brand" href="#conteudos"><span class="brand-mark">I</span><span>The Instrumentalist</span></a>
     <div class="sidebar-label">Workspace</div>
     <nav>
-      <a class="nav-item active" href="admin.html"><span class="nav-icon">▦</span> Conteúdos</a>
-      <a class="nav-item" href="home.html?preview=admin"><span class="nav-icon">⌂</span> Visualizar home</a>
+      <a class="nav-item" href="#conteudos" data-view="content"><span class="nav-icon" aria-hidden="true">▦</span> Conteúdos</a>
+      <a class="nav-item" href="#usuarios" data-view="users" id="navUsers" hidden><span class="nav-icon" aria-hidden="true">☺</span> Usuários</a>
+      <a class="nav-item" href="home.html"><span class="nav-icon" aria-hidden="true">⌂</span> Ver como aluno</a>
     </nav>
-    <div class="sidebar-footer"><span class="status-dot"></span><span>API conectada</span></div>
+    <div class="sidebar-footer">
+      <span class="status-dot" aria-hidden="true"></span>
+      <span class="identity"><b id="adminIdentity">Carregando…</b><small id="adminRole"></small></span>
+      <button id="logoutButton" class="logout-link" type="button">Sair</button>
+    </div>
   </aside>
 
   <main class="main-content">
-    <header class="page-header">
-      <div><span class="eyebrow">Painel editorial</span><h1>Conteúdos</h1><p>Publique experiências para a próxima sessão de estudo.</p></div>
-      <div class="admin-access"><label for="adminKey">Chave de acesso</label><input id="adminKey" type="password" placeholder="Digite a chave" autocomplete="off"><button id="refreshBtn" class="icon-button" type="button" aria-label="Atualizar conteúdos" title="Atualizar conteúdos">↻</button></div>
-    </header>
 
-    <section class="stats-grid" aria-label="Resumo de conteúdos">
-      <article class="stat-card"><span class="stat-label">Total publicado</span><strong id="totalCount">0</strong><span class="stat-note">itens no catálogo</span></article>
-      <article class="stat-card stat-card--peach"><span class="stat-label">Aulas</span><strong id="lessonCount">0</strong><span class="stat-note">vídeos disponíveis</span></article>
-      <article class="stat-card stat-card--mint"><span class="stat-label">Materiais</span><strong id="materialCount">0</strong><span class="stat-note">músicas e partituras</span></article>
+    <!-- ================= Conteúdos ================= -->
+    <section id="contentView" hidden>
+      <header class="page-header">
+        <div><span class="eyebrow">Painel editorial</span><h1>Conteúdos</h1><p>Publique aulas, músicas e partituras para os alunos.</p></div>
+        <div class="admin-access"><button id="refreshBtn" class="icon-button" type="button" aria-label="Atualizar conteúdos" title="Atualizar conteúdos">↻</button></div>
+      </header>
+
+      <section class="stats-grid" aria-label="Resumo de conteúdos">
+        <article class="stat-card"><span class="stat-label">Publicados</span><strong id="totalCount">–</strong><span class="stat-note" id="draftNote">visíveis para os alunos</span></article>
+        <article class="stat-card stat-card--peach"><span class="stat-label">Aulas</span><strong id="lessonCount">–</strong><span class="stat-note">vídeos e áudios</span></article>
+        <article class="stat-card stat-card--mint"><span class="stat-label">Materiais</span><strong id="materialCount">–</strong><span class="stat-note">músicas e partituras</span></article>
+      </section>
+
+      <div class="content-grid">
+        <section class="panel publish-panel" id="publishPanel">
+          <div class="panel-heading">
+            <div><span class="eyebrow" id="formEyebrow">Novo conteúdo</span><h2 id="formTitle">Publicar item</h2></div>
+            <button class="ghost-button" id="cancelEdit" type="button" hidden>Cancelar edição</button>
+          </div>
+          <form id="contentForm" novalidate>
+            <div class="type-switch" role="radiogroup" aria-label="Tipo de conteúdo" id="typeSwitch">
+              <button class="type-option active" type="button" data-type="aula" role="radio" aria-checked="true">Aula</button>
+              <button class="type-option" type="button" data-type="musica" role="radio" aria-checked="false">Música</button>
+              <button class="type-option" type="button" data-type="partitura" role="radio" aria-checked="false">Partitura</button>
+            </div>
+
+            <label class="field"><span>Título <i>*</i></span><input id="title" name="title" required maxlength="140" placeholder="Ex.: Ritmo e levada de bossa nova"></label>
+            <div class="field-row">
+              <label class="field"><span>Instrumento <i>*</i></span><select id="instrument" name="instrument" required><option value="">Carregando…</option></select></label>
+              <label class="field"><span>Nível <i>*</i></span><select id="level" name="level"><option>Iniciante</option><option>Intermediário</option><option>Avançado</option></select></label>
+            </div>
+            <label class="field"><span>Descrição</span><textarea id="description" name="description" rows="3" maxlength="2000" placeholder="O que o aluno vai encontrar neste conteúdo?"></textarea></label>
+
+            <div class="field" id="sourceField">
+              <span>Origem do conteúdo <i>*</i></span>
+              <div class="segmented" role="radiogroup" aria-label="Origem do conteúdo">
+                <button type="button" class="segment active" data-source="file" role="radio" aria-checked="true">Enviar arquivo</button>
+                <button type="button" class="segment" data-source="link" role="radio" aria-checked="false">Usar link</button>
+              </div>
+            </div>
+            <label class="field" id="resourceField"><span id="resourceLabel">Arquivo da aula <i>*</i></span><input id="resource" name="resource" type="file"><small class="hint" id="resourceHint"></small></label>
+            <label class="field" id="urlField" hidden><span id="urlLabel">Link <i>*</i></span><input id="url" name="url" type="url" maxlength="2000" placeholder="https://www.youtube.com/watch?v=…"><small class="hint" id="urlHint">YouTube, Vimeo ou link direto para o arquivo.</small></label>
+
+            <div class="field-row">
+              <label class="field"><span>Professor <i>*</i></span><select id="teacher" name="teacher_id" required><option value="">Carregando…</option></select></label>
+              <label class="field" id="durationField"><span>Duração</span><input id="duration" name="duration" placeholder="mm:ss" inputmode="numeric" pattern="^\d{1,3}(:[0-5]\d){1,2}$"></label>
+            </div>
+
+            <label class="check-field"><input type="checkbox" id="published" checked> <span>Publicar agora <small>(desmarque para salvar como rascunho)</small></span></label>
+
+            <div class="upload-progress" id="uploadProgress" hidden><div class="upload-progress-bar" id="uploadProgressBar"></div><span id="uploadProgressLabel">Enviando… 0%</span></div>
+
+            <button class="submit-button" type="submit" id="submitButton"><span id="submitLabel">Publicar conteúdo</span><b aria-hidden="true">↗</b></button>
+            <p class="form-feedback" id="formFeedback" role="status"></p>
+          </form>
+        </section>
+
+        <section class="panel library-panel">
+          <div class="panel-heading library-heading"><div><span class="eyebrow">Catálogo</span><h2>Conteúdos</h2></div><span class="count-pill" id="visibleCount">0 itens</span></div>
+          <input class="search-input" id="contentSearch" type="search" placeholder="Buscar por título, instrumento ou professor…" aria-label="Buscar conteúdos">
+          <div class="filter-bar" role="tablist">
+            <button class="filter-button active" type="button" data-filter="todos">Todos</button>
+            <button class="filter-button" type="button" data-filter="aula">Aulas</button>
+            <button class="filter-button" type="button" data-filter="musica">Músicas</button>
+            <button class="filter-button" type="button" data-filter="partitura">Partituras</button>
+            <button class="filter-button" type="button" data-filter="rascunho">Rascunhos</button>
+          </div>
+          <div id="contentList" class="content-list"><div class="empty-state"><span>♪</span><p>Carregando catálogo…</p></div></div>
+        </section>
+      </div>
     </section>
 
-    <div class="content-grid">
-      <section class="panel publish-panel">
-        <div class="panel-heading"><div><span class="eyebrow">Novo conteúdo</span><h2>Publicar item</h2></div><span class="step-badge">01</span></div>
-        <form id="contentForm" enctype="multipart/form-data" novalidate>
-          <div class="type-switch" role="tablist" aria-label="Tipo de conteúdo">
-            <button class="type-option active" type="button" data-type="aula">Aula</button>
-            <button class="type-option" type="button" data-type="musica">Música</button>
-            <button class="type-option" type="button" data-type="partitura">Partitura</button>
-          </div>
-          <input id="contentType" name="type" type="hidden" value="aula">
-          <label class="field"><span>Título <i>*</i></span><input id="title" name="title" required placeholder="Ex.: Ritmo e levada de bossa nova"></label>
-          <div class="field-row"><label class="field"><span>Instrumento <i>*</i></span><select id="instrument" name="instrument" required><option value="">Selecione</option><option>Violão</option><option>Piano</option><option>Bateria</option><option>Violino</option><option>Ukulele</option><option>Canto</option></select></label><label class="field"><span>Nível</span><select id="level" name="level"><option>Iniciante</option><option>Intermediário</option><option>Avançado</option></select></label></div>
-          <label class="field"><span>Descrição</span><textarea id="description" name="description" rows="3" placeholder="O que o aluno vai encontrar neste conteúdo?"></textarea></label>
-          <label class="field" id="resourceField"><span id="urlLabel">Arquivo da aula <i>*</i></span><input id="resource" name="resource" type="file" required accept="video/*,audio/*,.pdf,.png,.jpg,.jpeg"></label>
-          <label class="field" id="urlField" style="display:none"><span>Link do conteúdo <i>*</i></span><input id="url" name="url" type="url" placeholder="https://..."></label>
-          <div class="field-row"><label class="field"><span>Professor / autor</span><input id="teacher" name="teacher" placeholder="Nome do responsável"></label><label class="field" id="durationField"><span>Duração</span><input id="duration" name="duration" placeholder="Ex.: 12:40"></label></div>
-          <button class="submit-button" type="submit"><span>Publicar conteúdo</span><b>↗</b></button>
-          <p class="form-feedback" id="formFeedback" role="status"></p>
-        </form>
+    <!-- ================= Usuários ================= -->
+    <section id="usersView" hidden>
+      <header class="page-header">
+        <div><span class="eyebrow">Administração</span><h1>Usuários</h1><p>Veja quem está estudando e defina quem é professor ou administrador.</p></div>
+        <div class="admin-access"><button id="refreshUsersBtn" class="icon-button" type="button" aria-label="Atualizar usuários" title="Atualizar usuários">↻</button></div>
+      </header>
+
+      <section class="stats-grid" aria-label="Resumo de usuários">
+        <article class="stat-card"><span class="stat-label">Alunos</span><strong id="studentCount">–</strong><span class="stat-note">contas de aluno</span></article>
+        <article class="stat-card stat-card--peach"><span class="stat-label">Professores</span><strong id="teacherCount">–</strong><span class="stat-note">podem publicar conteúdo</span></article>
+        <article class="stat-card stat-card--mint"><span class="stat-label">Administradores</span><strong id="adminCount">–</strong><span class="stat-note">acesso total</span></article>
       </section>
 
-      <section class="panel library-panel">
-        <div class="panel-heading library-heading"><div><span class="eyebrow">Catálogo</span><h2>Publicados recentemente</h2></div><span class="count-pill" id="visibleCount">0 itens</span></div>
-        <div class="filter-bar"><button class="filter-button active" type="button" data-filter="todos">Todos</button><button class="filter-button" type="button" data-filter="aula">Aulas</button><button class="filter-button" type="button" data-filter="musica">Músicas</button><button class="filter-button" type="button" data-filter="partitura">Partituras</button></div>
-        <div id="contentList" class="content-list"><div class="empty-state"><span>♪</span><p>Carregando catálogo...</p></div></div>
+      <section class="panel">
+        <div class="panel-heading library-heading"><div><span class="eyebrow">Contas</span><h2>Todos os usuários</h2></div><span class="count-pill" id="userVisibleCount">0 usuários</span></div>
+        <input class="search-input" id="userSearch" type="search" placeholder="Buscar por nome ou e-mail…" aria-label="Buscar usuários">
+        <div class="table-wrap">
+          <table class="users-table">
+            <thead><tr><th>Usuário</th><th>Instrumento</th><th>XP</th><th>Cadastro</th><th>Último acesso</th><th>Papel</th></tr></thead>
+            <tbody id="usersBody"><tr><td colspan="6" class="table-empty">Carregando usuários…</td></tr></tbody>
+          </table>
+        </div>
+        <p class="form-feedback" id="usersFeedback" role="status"></p>
       </section>
-    </div>
+    </section>
+
   </main>
 </div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<script src="session.js"></script>
 <script src="admin.js"></script>
 </body>
 </html>
