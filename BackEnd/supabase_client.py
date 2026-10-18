@@ -42,6 +42,34 @@ SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
 
 
+# Mensagens que o Supabase devolve em inglês -> texto mostrado ao usuário.
+_MESSAGE_TRANSLATIONS = (
+    ("invalid login credentials", "E-mail ou senha incorretos."),
+    ("email not confirmed", "Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada."),
+    ("user already registered", "Este e-mail já está cadastrado."),
+    ("already been registered", "Este e-mail já está cadastrado."),
+    ("new password should be different", "A nova senha precisa ser diferente da anterior."),
+    ("password should be at least", "A senha deve ter pelo menos 6 caracteres."),
+    ("for security purposes", "Aguarde alguns segundos antes de tentar novamente."),
+    ("rate limit", "Muitas tentativas. Aguarde alguns minutos e tente de novo."),
+    ("invalid refresh token", "Sessão expirada. Faça login novamente."),
+    ("refresh token not found", "Sessão expirada. Faça login novamente."),
+    ("jwt expired", "Sessão expirada. Faça login novamente."),
+    ("row-level security", "Você não tem permissão para esta ação."),
+    ("signups not allowed", "Novos cadastros estão desativados no momento."),
+    ("payload too large", "O arquivo é maior que o limite permitido."),
+    ("exceeded the maximum allowed size", "O arquivo é maior que o limite permitido."),
+)
+
+
+def translate_message(message: str) -> str:
+    lowered = (message or "").lower()
+    for needle, translated in _MESSAGE_TRANSLATIONS:
+        if needle in lowered:
+            return translated
+    return message
+
+
 class SupabaseError(Exception):
     """Erro ao chamar o Supabase, com mensagem segura para mostrar ao usuário."""
 
@@ -75,7 +103,7 @@ def _request(
 
     request = Request(url, data=data, headers=headers, method=method)
     try:
-        with urlopen(request, timeout=10) as response:
+        with urlopen(request, timeout=15) as response:
             raw = response.read().decode("utf-8")
             parsed = json.loads(raw) if raw else None
             return parsed, response.status
@@ -85,12 +113,12 @@ def _request(
             details = json.loads(raw) if raw else {}
         except (UnicodeDecodeError, json.JSONDecodeError):
             details = {}
-        message = str(
+        message = translate_message(str(
             details.get("message")
             or details.get("error_description")
             or details.get("msg")
             or "Não foi possível completar a operação."
-        )
+        ))
         raise SupabaseError(message, error.code) from error
     except (URLError, TimeoutError) as error:
         raise SupabaseError("Não foi possível conectar ao banco de dados.", 503) from error
@@ -117,14 +145,43 @@ def rest_upsert(
     return data if isinstance(data, list) else []
 
 
-def rest_update(table: str, token: Optional[str], params: Dict[str, str], patch: Dict[str, Any]) -> None:
+def rest_update(table: str, token: Optional[str], params: Dict[str, str], patch: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """PATCH via PostgREST; devolve as linhas alteradas (lista vazia = nada casou)."""
     url = f"{SUPABASE_URL}/rest/v1/{table}?{urlencode(params)}"
-    _request("PATCH", url, token=token, body=patch, extra_headers={"Prefer": "return=minimal"})
+    data, _ = _request("PATCH", url, token=token, body=patch, extra_headers={"Prefer": "return=representation"})
+    return data if isinstance(data, list) else []
 
 
 def rest_delete(table: str, token: Optional[str], params: Dict[str, str]) -> None:
     url = f"{SUPABASE_URL}/rest/v1/{table}?{urlencode(params)}"
     _request("DELETE", url, token=token, extra_headers={"Prefer": "return=minimal"})
+
+
+def rpc(function: str, token: Optional[str], args: Optional[Dict[str, Any]] = None) -> Any:
+    """Chama uma função do banco (POST /rest/v1/rpc/<nome>)."""
+    url = f"{SUPABASE_URL}/rest/v1/rpc/{function}"
+    data, _ = _request("POST", url, token=token, body=args or {})
+    return data
+
+
+def delete_storage_objects(bucket: str, token: str, object_paths: List[str]) -> None:
+    if not object_paths:
+        return
+    url = f"{SUPABASE_URL}/storage/v1/object/{bucket}"
+    _request("DELETE", url, token=token, body={"prefixes": object_paths})
+
+
+def update_auth_user(token: str, attributes: Dict[str, Any]) -> Dict[str, Any]:
+    """Atualiza o usuário dono do token (ex.: nova senha após recuperação)."""
+    url = f"{SUPABASE_URL}/auth/v1/user"
+    data, _ = _request("PUT", url, token=token, body=attributes)
+    return data if isinstance(data, dict) else {}
+
+
+def sign_out(token: str) -> None:
+    """Revoga o refresh_token da sessão atual no Supabase Auth."""
+    url = f"{SUPABASE_URL}/auth/v1/logout?scope=local"
+    _request("POST", url, token=token)
 
 
 def upload_storage_object(bucket: str, token: str, object_path: str, data: bytes, content_type: str) -> None:
@@ -140,7 +197,7 @@ def upload_storage_object(bucket: str, token: str, object_path: str, data: bytes
     }
     request = Request(url, data=data, headers=headers, method="POST")
     try:
-        with urlopen(request, timeout=30):
+        with urlopen(request, timeout=600):
             return
     except HTTPError as error:
         try:
@@ -148,7 +205,7 @@ def upload_storage_object(bucket: str, token: str, object_path: str, data: bytes
             details = json.loads(raw) if raw else {}
         except (UnicodeDecodeError, json.JSONDecodeError):
             details = {}
-        message = str(details.get("message") or details.get("error") or "Não foi possível enviar o arquivo.")
+        message = translate_message(str(details.get("message") or details.get("error") or "Não foi possível enviar o arquivo."))
         raise SupabaseError(message, error.code) from error
     except (URLError, TimeoutError) as error:
         raise SupabaseError("Não foi possível conectar ao armazenamento.", 503) from error

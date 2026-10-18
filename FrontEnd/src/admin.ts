@@ -2,123 +2,467 @@
   "use strict";
 
   type ContentType = "aula" | "musica" | "partitura";
-  type Content = { id: string; type: ContentType; title: string; instrument: string; description: string; url: string; teacher: string; duration: string; level: string; };
-  type StoredUser = { email: string; name?: string; role?: string; access_token?: string; refresh_token?: string };
+  type Source = "file" | "link";
+  type Content = {
+    id: string;
+    type: ContentType;
+    title: string;
+    instrument: string;
+    instrument_slug: string;
+    description: string;
+    url: string;
+    teacher: string;
+    teacher_id: string;
+    duration: string;
+    level: string;
+    published: boolean;
+  };
+  type Teacher = { id: string; name: string; role: string };
+  type AdminUser = {
+    id: string;
+    display_name: string;
+    email: string;
+    role: "student" | "teacher" | "admin";
+    xp_total: number;
+    primary_instrument: string | null;
+    created_at: string;
+    last_sign_in_at: string | null;
+  };
 
-  const API_URL = window.location.protocol === "file:" ? "http://localhost:8001" : window.location.origin;
-  const USER_KEY = "theInstrumentalistUser";
+  const stored = AppSession.requireUser();
+  if (!stored) return;
+  if (!AppSession.isStaff(stored)) { window.location.replace("home.html"); return; }
 
-  const form = document.getElementById("contentForm") as HTMLFormElement;
-  const feedback = document.getElementById("formFeedback") as HTMLParagraphElement;
-  const list = document.getElementById("contentList") as HTMLDivElement;
-  const instrumentSelect = document.getElementById("instrument") as HTMLSelectElement | null;
-  const adminIdentity = document.getElementById("adminIdentity");
+  const esc = AppSession.escapeHtml;
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+
+  const form = $<HTMLFormElement>("contentForm");
+  const list = $("contentList");
+  const instrumentSelect = $<HTMLSelectElement>("instrument");
+  const teacherSelect = $<HTMLSelectElement>("teacher");
+  const resourceInput = $<HTMLInputElement>("resource");
+  const urlInput = $<HTMLInputElement>("url");
+  const durationInput = $<HTMLInputElement>("duration");
+  const publishedInput = $<HTMLInputElement>("published");
+  const submitButton = $<HTMLButtonElement>("submitButton");
+
+  const STORAGE_MARKER = "/storage/v1/object/public/";
+  const ROLE_LABEL: Record<string, string> = { student: "Aluno", teacher: "Professor", admin: "Administrador" };
+  const TYPE_LABEL: Record<ContentType, string> = { aula: "Aula", musica: "Música", partitura: "Partitura" };
+  const TYPE_SYMBOL: Record<ContentType, string> = { aula: "▶", musica: "♪", partitura: "♫" };
+
+  let me: StoredUser = stored;
   let contents: Content[] = [];
+  let teachers: Teacher[] = [];
+  let users: AdminUser[] = [];
   let activeFilter = "todos";
+  let currentType: ContentType = "aula";
+  let currentSource: Source = "file";
+  let editing: Content | null = null;
+  let busy = false;
 
-  function getUser(): StoredUser | null {
+  // ---------- Utilitários ----------
+  let toastTimer = 0;
+  function toast(message: string, kind: "success" | "error" = "success"): void {
+    const element = $("toast");
+    element.textContent = message;
+    element.className = `toast toast--${kind}`;
+    element.hidden = false;
+    window.clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(() => { element.hidden = true; }, 4000);
+  }
+
+  function setFeedback(message: string, error = false): void {
+    const feedback = $("formFeedback");
+    feedback.textContent = message;
+    feedback.classList.toggle("error", error);
+  }
+
+  function errorMessage(error: unknown, fallback: string): string {
+    return error instanceof Error ? error.message : fallback;
+  }
+
+  function formatDate(value: string | null): string {
+    if (!value) return "—";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? "—" : date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+  }
+
+  function isAdmin(): boolean { return me.role === "admin"; }
+
+  // ---------- Navegação entre telas ----------
+  function showView(): void {
+    const wantsUsers = window.location.hash === "#usuarios";
+    if (wantsUsers && !isAdmin()) { history.replaceState(null, "", "#conteudos"); }
+    const view = wantsUsers && isAdmin() ? "users" : "content";
+    $("contentView").hidden = view !== "content";
+    $("usersView").hidden = view !== "users";
+    document.querySelectorAll<HTMLElement>(".nav-item[data-view]").forEach((item) => item.classList.toggle("active", item.dataset.view === view));
+    if (view === "users" && !users.length) loadUsers();
+  }
+  window.addEventListener("hashchange", showView);
+
+  // ---------- Formulário de conteúdo ----------
+  function setType(type: ContentType): void {
+    currentType = type;
+    document.querySelectorAll<HTMLButtonElement>(".type-option").forEach((button) => {
+      const active = button.dataset.type === type;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-checked", String(active));
+    });
+    $("sourceField").hidden = type === "musica";
+    $("durationField").hidden = type === "partitura";
+    setSource(type === "musica" ? "link" : currentSource);
+  }
+
+  function setSource(source: Source): void {
+    currentSource = currentType === "musica" ? "link" : source;
+    document.querySelectorAll<HTMLButtonElement>(".segment").forEach((button) => {
+      const active = button.dataset.source === currentSource;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-checked", String(active));
+    });
+    const isFile = currentSource === "file";
+    $("resourceField").hidden = !isFile;
+    $("urlField").hidden = isFile;
+
+    const keepNote = editing ? " Deixe vazio para manter o arquivo atual." : "";
+    if (currentType === "partitura") {
+      $("resourceLabel").innerHTML = `Arquivo PDF da partitura${editing ? "" : " <i>*</i>"}`;
+      resourceInput.accept = ".pdf,application/pdf";
+      $("resourceHint").textContent = `Somente PDF.${keepNote}`;
+      $("urlLabel").innerHTML = "Link do PDF <i>*</i>";
+      urlInput.placeholder = "https://…/partitura.pdf";
+      $("urlHint").textContent = "Link direto para o PDF.";
+    } else if (currentType === "aula") {
+      $("resourceLabel").innerHTML = `Vídeo ou áudio da aula${editing ? "" : " <i>*</i>"}`;
+      resourceInput.accept = "video/mp4,video/webm,video/quicktime,audio/mpeg,audio/wav,audio/ogg,.mp4,.webm,.mov,.mp3,.wav,.ogg";
+      $("resourceHint").textContent = `MP4, WEBM, MOV, MP3, WAV ou OGG.${keepNote}`;
+      $("urlLabel").innerHTML = "Link do vídeo <i>*</i>";
+      urlInput.placeholder = "https://www.youtube.com/watch?v=…";
+      $("urlHint").textContent = "YouTube, Vimeo ou link direto para o arquivo.";
+    } else {
+      $("urlLabel").innerHTML = "Link da música <i>*</i>";
+      urlInput.placeholder = "https://open.spotify.com/… ou https://youtube.com/…";
+      $("urlHint").textContent = "Spotify, YouTube, SoundCloud ou outro link público.";
+    }
+    updateSubmitLabel();
+  }
+
+  function updateSubmitLabel(): void {
+    $("submitLabel").textContent = editing
+      ? "Salvar alterações"
+      : publishedInput.checked ? "Publicar conteúdo" : "Salvar rascunho";
+  }
+
+  function fillTeacherSelect(selectedId?: string): void {
+    const current = selectedId ?? teacherSelect.value;
+    teacherSelect.innerHTML = '<option value="">Selecione</option>'
+      + teachers.map((teacher) => `<option value="${esc(teacher.id)}">${esc(teacher.name)}${teacher.id === me.id ? " (você)" : ""}</option>`).join("");
+    const fallback = teachers.some((teacher) => teacher.id === me.id) ? me.id || "" : "";
+    teacherSelect.value = teachers.some((teacher) => teacher.id === current) ? current : fallback;
+  }
+
+  function resetForm(): void {
+    editing = null;
+    form.reset();
+    publishedInput.checked = true;
+    $("formEyebrow").textContent = "Novo conteúdo";
+    $("formTitle").textContent = "Publicar item";
+    $("cancelEdit").hidden = true;
+    $("typeSwitch").classList.remove("is-locked");
+    document.querySelectorAll<HTMLButtonElement>(".type-option").forEach((button) => { button.disabled = false; });
+    fillTeacherSelect(me.id);
+    currentSource = "file";
+    setType("aula");
+  }
+
+  function startEdit(item: Content): void {
+    editing = item;
+    form.reset();
+    ($("title") as HTMLInputElement).value = item.title;
+    instrumentSelect.value = item.instrument_slug;
+    ($("level") as HTMLSelectElement).value = item.level;
+    ($("description") as HTMLTextAreaElement).value = item.description;
+    durationInput.value = item.duration;
+    publishedInput.checked = item.published;
+    fillTeacherSelect(item.teacher_id);
+
+    const isStoredFile = item.url.includes(STORAGE_MARKER);
+    urlInput.value = isStoredFile ? "" : item.url;
+    currentSource = isStoredFile ? "file" : "link";
+    setType(item.type);
+    document.querySelectorAll<HTMLButtonElement>(".type-option").forEach((button) => { button.disabled = button.dataset.type !== item.type; });
+    $("typeSwitch").classList.add("is-locked");
+
+    $("formEyebrow").textContent = "Editando";
+    $("formTitle").textContent = "Editar item";
+    $("cancelEdit").hidden = false;
+    setFeedback("");
+    $("publishPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+    ($("title") as HTMLInputElement).focus({ preventScroll: true });
+  }
+
+  function validate(): string | null {
+    const title = ($("title") as HTMLInputElement).value.trim();
+    if (!title) return "Informe o título.";
+    if (!instrumentSelect.value) return "Escolha o instrumento.";
+    if (!teacherSelect.value) return "Escolha o professor responsável.";
+    if (currentSource === "file" && !resourceInput.files?.length && !editing) return "Selecione o arquivo para enviar.";
+    if (currentSource === "file" && editing && !resourceInput.files?.length && !editing.url.includes(STORAGE_MARKER)) {
+      return "Selecione o arquivo para enviar.";
+    }
+    if (currentSource === "link" && !/^https?:\/\/\S+$/i.test(urlInput.value.trim())) return "Informe um link válido começando com https://";
+    if (currentType !== "partitura" && durationInput.value.trim() && !/^\d{1,3}(:[0-5]\d){1,2}$/.test(durationInput.value.trim())) {
+      return "Duração inválida. Use mm:ss (ex.: 12:40).";
+    }
+    return null;
+  }
+
+  function setProgress(percent: number | null): void {
+    const wrap = $("uploadProgress");
+    wrap.hidden = percent === null;
+    if (percent === null) return;
+    $("uploadProgressBar").style.width = `${percent}%`;
+    $("uploadProgressLabel").textContent = percent < 100 ? `Enviando… ${percent}%` : "Processando…";
+  }
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (busy) return;
+    setFeedback("");
+    const problem = validate();
+    if (problem) { setFeedback(problem, true); return; }
+
+    const payload = new FormData();
+    payload.set("type", currentType);
+    payload.set("title", ($("title") as HTMLInputElement).value.trim());
+    payload.set("instrument", instrumentSelect.value);
+    payload.set("level", ($("level") as HTMLSelectElement).value);
+    payload.set("description", ($("description") as HTMLTextAreaElement).value.trim());
+    payload.set("teacher_id", teacherSelect.value);
+    payload.set("duration", currentType === "partitura" ? "" : durationInput.value.trim());
+    payload.set("published", publishedInput.checked ? "true" : "false");
+    if (currentSource === "link") payload.set("url", urlInput.value.trim());
+    const file = currentSource === "file" ? resourceInput.files?.[0] : undefined;
+    if (file) payload.set("resource", file, file.name);
+
+    busy = true;
+    submitButton.disabled = true;
+    setProgress(file ? 0 : null);
     try {
-      const user: unknown = JSON.parse(localStorage.getItem(USER_KEY) || "null");
-      return user && typeof user === "object" && "email" in user ? user as StoredUser : null;
-    } catch {
-      return null;
+      const path = editing ? `/admin/content/${encodeURIComponent(editing.id)}` : "/admin/content";
+      const result = await AppSession.upload<{ message: string }>(path, editing ? "PATCH" : "POST", payload, file ? setProgress : undefined);
+      toast(result.message || "Salvo.");
+      resetForm();
+      await loadContents();
+    } catch (error) {
+      setFeedback(errorMessage(error, "Não foi possível salvar."), true);
+    } finally {
+      busy = false;
+      submitButton.disabled = false;
+      setProgress(null);
+    }
+  });
+
+  document.querySelectorAll<HTMLButtonElement>(".type-option").forEach((button) => button.addEventListener("click", () => {
+    if (editing) return;
+    setType((button.dataset.type as ContentType) || "aula");
+  }));
+  document.querySelectorAll<HTMLButtonElement>(".segment").forEach((button) => button.addEventListener("click", () => {
+    setSource((button.dataset.source as Source) || "file");
+  }));
+  publishedInput.addEventListener("change", updateSubmitLabel);
+  $("cancelEdit").addEventListener("click", () => { resetForm(); setFeedback(""); });
+
+  // ---------- Catálogo ----------
+  function renderList(): void {
+    const query = ($("contentSearch") as HTMLInputElement).value.trim().toLowerCase();
+    const visible = contents.filter((item) => {
+      if (activeFilter === "rascunho" ? item.published : activeFilter !== "todos" && item.type !== activeFilter) return false;
+      if (!query) return true;
+      return [item.title, item.instrument, item.teacher].some((value) => value.toLowerCase().includes(query));
+    });
+    $("visibleCount").textContent = `${visible.length} ${visible.length === 1 ? "item" : "itens"}`;
+    if (!visible.length) {
+      list.innerHTML = `<div class="empty-state"><span>♪</span><p>${contents.length ? "Nenhum conteúdo encontrado." : "Nenhum conteúdo publicado ainda. Use o formulário ao lado para criar o primeiro."}</p></div>`;
+      return;
+    }
+    list.innerHTML = visible.map((item) => {
+      const meta = [TYPE_LABEL[item.type], item.instrument, item.level, item.teacher].filter(Boolean).map(esc).join(" · ");
+      const link = /^https?:\/\//i.test(item.url)
+        ? `<a class="content-link" href="${esc(item.url)}" target="_blank" rel="noopener">Abrir ↗</a>` : "";
+      return `<article class="content-item${editing?.id === item.id ? " is-editing" : ""}">`
+        + `<span class="content-symbol ${item.type}" aria-hidden="true">${TYPE_SYMBOL[item.type]}</span>`
+        + `<div class="content-body"><h3 class="content-title">${esc(item.title)}${item.published ? "" : ' <span class="draft-pill">Rascunho</span>'}</h3>`
+        + `<p class="content-meta">${meta}</p></div>`
+        + `<div class="content-actions">${link}`
+        + `<button class="text-button" type="button" data-edit="${esc(item.id)}">Editar</button>`
+        + `<button class="delete-button" type="button" data-delete="${esc(item.id)}" aria-label="Excluir ${esc(item.title)}" title="Excluir">×</button></div>`
+        + `</article>`;
+    }).join("");
+  }
+
+  async function loadContents(): Promise<void> {
+    try {
+      const data = await AppSession.api<{ content: Content[] }>("/admin/content");
+      contents = data.content || [];
+      const published = contents.filter((item) => item.published);
+      const drafts = contents.length - published.length;
+      $("totalCount").textContent = String(published.length);
+      $("draftNote").textContent = drafts ? `+ ${drafts} ${drafts === 1 ? "rascunho" : "rascunhos"}` : "visíveis para os alunos";
+      $("lessonCount").textContent = String(contents.filter((item) => item.type === "aula").length);
+      $("materialCount").textContent = String(contents.filter((item) => item.type !== "aula").length);
+      renderList();
+    } catch (error) {
+      list.innerHTML = `<div class="empty-state"><span>!</span><p>${esc(errorMessage(error, "Não foi possível carregar o catálogo."))}</p></div>`;
     }
   }
 
-  function goToLogin(): void {
-    try { localStorage.removeItem(USER_KEY); } catch { /* ignore */ }
-    window.location.href = "login.html";
-  }
+  list.addEventListener("click", async (event) => {
+    const target = event.target as HTMLElement;
+    const editButton = target.closest<HTMLButtonElement>("[data-edit]");
+    if (editButton) {
+      const item = contents.find((content) => content.id === editButton.dataset.edit);
+      if (item) { startEdit(item); renderList(); }
+      return;
+    }
+    const deleteButton = target.closest<HTMLButtonElement>("[data-delete]");
+    if (!deleteButton) return;
+    const item = contents.find((content) => content.id === deleteButton.dataset.delete);
+    if (!item || !window.confirm(`Excluir "${item.title}"? O arquivo enviado também será apagado. Essa ação não pode ser desfeita.`)) return;
+    deleteButton.disabled = true;
+    try {
+      await AppSession.api(`/admin/content/${encodeURIComponent(item.id)}`, { method: "DELETE" });
+      if (editing?.id === item.id) resetForm();
+      toast("Conteúdo excluído.");
+      await loadContents();
+    } catch (error) {
+      deleteButton.disabled = false;
+      toast(errorMessage(error, "Não foi possível excluir."), "error");
+    }
+  });
 
-  const user = getUser();
-  if (!user || !user.access_token || (user.role !== "admin" && user.role !== "teacher")) {
-    goToLogin();
-    throw new Error("Acesso restrito a administradores/professores.");
-  }
-  if (adminIdentity) adminIdentity.textContent = user.name || user.email;
-
-  const setFeedback = (message: string, error = false) => { feedback.textContent = message; feedback.classList.toggle("error", error); };
-  const typeLabel = (type: ContentType) => ({ aula: "Aula", musica: "Música", partitura: "Partitura" }[type]);
-  const typeSymbol = (type: ContentType) => ({ aula: "▶", musica: "♪", partitura: "♫" }[type]);
-  const escapeHtml = (value: string) => value.replace(/[&<>"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[char] || char));
-
-  function renderList() {
-    const visible = activeFilter === "todos" ? contents : contents.filter(item => item.type === activeFilter);
-    document.getElementById("visibleCount")!.textContent = `${visible.length} ${visible.length === 1 ? "item" : "itens"}`;
-    if (!visible.length) { list.innerHTML = '<div class="empty-state"><span>♪</span><p>Nenhum conteúdo neste filtro.</p></div>'; return; }
-    list.innerHTML = visible.map(item => `<article class="content-item"><span class="content-symbol ${item.type}">${typeSymbol(item.type)}</span><div><h3 class="content-title">${escapeHtml(item.title)}</h3><p class="content-meta">${typeLabel(item.type)} · ${escapeHtml(item.instrument)} · ${escapeHtml(item.level)}</p></div><div><a class="content-link" href="${escapeHtml(item.url)}" target="_blank" rel="noopener">Abrir ↗</a><button class="delete-button" data-delete="${escapeHtml(item.id)}" type="button" aria-label="Remover ${escapeHtml(item.title)}">×</button></div></article>`).join("");
-  }
-
-  async function request(path: string, options: RequestInit = {}) {
-    const headers = new Headers(options.headers);
-    headers.set("Authorization", `Bearer ${user!.access_token}`);
-    const response = await fetch(API_URL + path, { ...options, headers });
-    if (response.status === 401) { goToLogin(); throw new Error("Sessão expirada."); }
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || "Não foi possível concluir a operação.");
-    return data;
-  }
+  document.querySelectorAll<HTMLButtonElement>(".filter-button").forEach((button) => button.addEventListener("click", () => {
+    document.querySelectorAll(".filter-button").forEach((item) => item.classList.toggle("active", item === button));
+    activeFilter = button.dataset.filter || "todos";
+    renderList();
+  }));
+  $("contentSearch").addEventListener("input", renderList);
+  $("refreshBtn").addEventListener("click", () => { loadContents(); });
 
   async function loadInstruments(): Promise<void> {
-    if (!instrumentSelect) return;
+    const instruments = (await AppSession.loadInstruments()).slice().sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+    const current = instrumentSelect.value;
+    instrumentSelect.innerHTML = '<option value="">Selecione</option>'
+      + instruments.map((item) => `<option value="${esc(item.slug)}">${esc(item.name)}</option>`).join("");
+    if (current) instrumentSelect.value = current;
+  }
+
+  async function loadTeachers(): Promise<void> {
     try {
-      const data = await request("/instruments");
-      const instruments: Array<{ slug: string; name: string }> = data.instruments || [];
-      const current = instrumentSelect.value;
-      instrumentSelect.innerHTML = '<option value="">Selecione</option>';
-      instruments
-        .slice()
-        .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
-        .forEach((item) => {
-          const option = document.createElement("option");
-          option.value = item.slug;
-          option.textContent = item.name;
-          instrumentSelect.appendChild(option);
-        });
-      if (current) instrumentSelect.value = current;
+      const data = await AppSession.api<{ teachers: Teacher[] }>("/admin/teachers");
+      teachers = data.teachers || [];
+    } catch {
+      teachers = me.id ? [{ id: me.id, name: me.name || me.email, role: me.role || "teacher" }] : [];
+    }
+    fillTeacherSelect(editing?.teacher_id || me.id);
+  }
+
+  // ---------- Usuários ----------
+  function renderUsers(): void {
+    const query = ($("userSearch") as HTMLInputElement).value.trim().toLowerCase();
+    const visible = users.filter((user) => !query || `${user.display_name} ${user.email}`.toLowerCase().includes(query));
+    $("studentCount").textContent = String(users.filter((user) => user.role === "student").length);
+    $("teacherCount").textContent = String(users.filter((user) => user.role === "teacher").length);
+    $("adminCount").textContent = String(users.filter((user) => user.role === "admin").length);
+    $("userVisibleCount").textContent = `${visible.length} ${visible.length === 1 ? "usuário" : "usuários"}`;
+
+    const body = $("usersBody");
+    if (!visible.length) {
+      body.innerHTML = `<tr><td colspan="6" class="table-empty">${users.length ? "Nenhum usuário encontrado." : "Nenhum usuário cadastrado."}</td></tr>`;
+      return;
+    }
+    body.innerHTML = visible.map((user) => {
+      const isMe = user.id === me.id;
+      const options = Object.keys(ROLE_LABEL)
+        .map((role) => `<option value="${role}"${role === user.role ? " selected" : ""}>${ROLE_LABEL[role]}</option>`).join("");
+      return `<tr>`
+        + `<td data-label="Usuário"><div class="user-cell"><span class="user-avatar" aria-hidden="true">${esc(AppSession.initial(user.display_name || user.email))}</span>`
+        + `<span><b>${esc(user.display_name || "Sem nome")}${isMe ? " (você)" : ""}</b><small>${esc(user.email)}</small></span></div></td>`
+        + `<td data-label="Instrumento">${esc(user.primary_instrument || "—")}</td>`
+        + `<td data-label="XP">${Number(user.xp_total || 0).toLocaleString("pt-BR")}</td>`
+        + `<td data-label="Cadastro">${esc(formatDate(user.created_at))}</td>`
+        + `<td data-label="Último acesso">${esc(formatDate(user.last_sign_in_at))}</td>`
+        + `<td data-label="Papel"><select class="role-select" data-user="${esc(user.id)}" aria-label="Papel de ${esc(user.display_name)}"${isMe ? ' disabled title="Você não pode alterar o seu próprio papel."' : ""}>${options}</select></td>`
+        + `</tr>`;
+    }).join("");
+  }
+
+  async function loadUsers(): Promise<void> {
+    if (!isAdmin()) return;
+    try {
+      const data = await AppSession.api<{ users: AdminUser[] }>("/admin/users");
+      users = data.users || [];
+      renderUsers();
     } catch (error) {
-      console.error("Não foi possível carregar a lista de instrumentos.", error);
+      $("usersBody").innerHTML = `<tr><td colspan="6" class="table-empty">${esc(errorMessage(error, "Não foi possível carregar os usuários."))}</td></tr>`;
     }
   }
 
-  async function loadContents() {
+  $("usersBody").addEventListener("change", async (event) => {
+    const select = (event.target as HTMLElement).closest<HTMLSelectElement>(".role-select");
+    if (!select?.dataset.user) return;
+    const user = users.find((item) => item.id === select.dataset.user);
+    if (!user) return;
+    const role = select.value as AdminUser["role"];
+    const warning = role === "admin"
+      ? `Tornar ${user.display_name} administrador? Essa pessoa terá acesso total, inclusive para gerenciar usuários.`
+      : `Alterar o papel de ${user.display_name} para ${ROLE_LABEL[role]}?`;
+    if (!window.confirm(warning)) { select.value = user.role; return; }
+    select.disabled = true;
     try {
-      const data = await request("/admin/content");
-      contents = data.content || [];
-      renderList();
-      document.getElementById("totalCount")!.textContent = String(contents.length);
-      document.getElementById("lessonCount")!.textContent = String(contents.filter(item => item.type === "aula").length);
-      document.getElementById("materialCount")!.textContent = String(contents.filter(item => item.type !== "aula").length);
+      await AppSession.api(`/admin/users/${encodeURIComponent(user.id)}/role`, { method: "POST", json: { role } });
+      user.role = role;
+      toast(`${user.display_name} agora é ${ROLE_LABEL[role].toLowerCase()}.`);
+      renderUsers();
+      loadTeachers();
     } catch (error) {
-      list.innerHTML = `<div class="empty-state"><span>!</span><p>${error instanceof Error ? escapeHtml(error.message) : "Não foi possível carregar o catálogo."}</p></div>`;
+      select.value = user.role;
+      toast(errorMessage(error, "Não foi possível alterar o papel."), "error");
+    } finally {
+      select.disabled = false;
     }
+  });
+  $("userSearch").addEventListener("input", renderUsers);
+  $("refreshUsersBtn").addEventListener("click", () => { loadUsers(); });
+
+  // ---------- Sessão ----------
+  function renderIdentity(): void {
+    $("adminIdentity").textContent = me.name || me.email;
+    $("adminRole").textContent = ROLE_LABEL[me.role || ""] || "";
+    $("navUsers").hidden = !isAdmin();
   }
 
-  document.getElementById("logoutButton")?.addEventListener("click", () => { goToLogin(); });
+  $("logoutButton").addEventListener("click", () => { AppSession.logout(); });
 
-  document.querySelectorAll<HTMLButtonElement>(".type-option").forEach(button => button.addEventListener("click", () => {
-    document.querySelectorAll(".type-option").forEach(item => item.classList.remove("active")); button.classList.add("active");
-    (document.getElementById("contentType") as HTMLInputElement).value = button.dataset.type || "aula";
-    const type = button.dataset.type as ContentType;
-    const resourceField = document.getElementById("resourceField")!;
-    const urlField = document.getElementById("urlField")!;
-    const resource = document.getElementById("resource") as HTMLInputElement;
-    const isUpload = type === "aula" || type === "partitura";
-    const linkLabel = type === "partitura" ? "Link do PDF <i>*</i>" : "Link da música <i>*</i>";
-    document.getElementById("urlLabel")!.innerHTML = type === "aula" ? "Arquivo da aula <i>*</i>" : "Arquivo PDF da partitura <i>*</i>";
-    resource.accept = type === "partitura" ? ".pdf,application/pdf" : "video/*,audio/*,.pdf,.png,.jpg,.jpeg";
-    resourceField.style.display = isUpload ? "block" : "none";
-    urlField.style.display = isUpload ? "none" : "block";
-    resource.required = isUpload;
-    const url = document.getElementById("url") as HTMLInputElement | null;
-    if (url) url.required = !isUpload;
-    document.getElementById("durationField")!.style.display = type === "partitura" ? "none" : "block";
-  }));
-  document.querySelectorAll<HTMLButtonElement>(".filter-button").forEach(button => button.addEventListener("click", () => { document.querySelectorAll(".filter-button").forEach(item => item.classList.remove("active")); button.classList.add("active"); activeFilter = button.dataset.filter || "todos"; renderList(); }));
-  document.getElementById("refreshBtn")?.addEventListener("click", loadContents);
-  list?.addEventListener("click", async event => { const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-delete]"); if (!button || !window.confirm("Remover este conteúdo do catálogo?")) return; try { await request(`/admin/content/${button.dataset.delete}`, { method: "DELETE" }); await loadContents(); } catch (error) { setFeedback(error instanceof Error ? error.message : "Não foi possível remover o conteúdo.", true); } });
-  form?.addEventListener("submit", async event => { event.preventDefault(); setFeedback(""); if (!form.checkValidity()) { form.reportValidity(); return; } const payload = new FormData(form); payload.set("type", (document.getElementById("contentType") as HTMLInputElement).value); try { await request("/admin/content", { method: "POST", body: payload }); form.reset(); document.querySelector<HTMLButtonElement>(".type-option[data-type='aula']")?.click(); setFeedback("Conteúdo publicado com sucesso."); await loadContents(); } catch (error) { setFeedback(error instanceof Error ? error.message : "Não foi possível publicar.", true); } });
+  async function init(): Promise<void> {
+    renderIdentity();
+    try {
+      // O papel salvo no navegador pode estar desatualizado: confirma no servidor.
+      const data = await AppSession.api<{ user: StoredUser }>("/me");
+      me = { ...stored!, ...data.user };
+      AppSession.saveUser(me);
+      if (!AppSession.isStaff(me)) { window.location.replace("home.html"); return; }
+    } catch (error) {
+      if (error instanceof AppApiError && error.status === 401) return;
+    }
+    renderIdentity();
+    showView();
+    resetForm();
+    await Promise.all([loadInstruments(), loadTeachers()]);
+    await loadContents();
+  }
 
-  loadInstruments();
-  loadContents();
+  init();
 })();

@@ -1,288 +1,557 @@
 "use strict";
 (() => {
     "use strict";
-    var _a, _b, _c;
-    const API_URL = window.location.protocol === "file:" ? "http://localhost:8001" : window.location.origin;
-    const USER_KEY = "theInstrumentalistUser";
-    function getUserFromStorage() {
-        try {
-            const user = JSON.parse(localStorage.getItem(USER_KEY) || "null");
-            return user && typeof user === "object" && "email" in user && typeof user.email === "string" ? user : null;
-        }
-        catch (_a) {
-            return null;
-        }
+    var _a, _b, _c, _d, _e, _f, _g;
+    const storedUser = AppSession.requireUser();
+    if (!storedUser)
+        return;
+    const esc = AppSession.escapeHtml;
+    const $ = (id) => document.getElementById(id);
+    let homepage = null;
+    let activeFilter = "all";
+    let currentLesson = null;
+    let firstLoad = true;
+    const TYPE_LABEL = { aula: "Aula", musica: "Música", partitura: "Partitura" };
+    const TYPE_THUMB = { aula: "violet", musica: "teal", partitura: "yellow" };
+    const TYPE_ICON = {
+        aula: '<path d="M8 5v14l11-7Z" fill="currentColor" stroke="none"/>',
+        musica: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+        partitura: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/>',
+    };
+    const BADGE_ICON = {
+        "primeiro-passo": '<circle cx="12" cy="9" r="5.5"/><path d="M9 13.5 7.5 21 12 18.5 16.5 21 15 13.5"/>',
+        constancia: '<path d="M12 3c1 3-2 4-2 7a3 3 0 1 0 6 0c0-1-1-2-1-2 2 1 3 3 3 5a6 6 0 1 1-12 0c0-4 3-5 4-8 1-1 1-2 2-2Z"/>',
+        maratona: '<path d="M12 3c1 3-2 4-2 7a3 3 0 1 0 6 0c0-1-1-2-1-2 2 1 3 3 3 5a6 6 0 1 1-12 0c0-4 3-5 4-8 1-1 1-2 2-2Z"/><path d="M4 21h16"/>',
+        explorador: '<circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/>',
+    };
+    const LOCK_ICON = '<rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>';
+    function svg(paths, size = 20) {
+        return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">${paths}</svg>`;
     }
-    function saveUser(user) {
-        try {
-            localStorage.setItem(USER_KEY, JSON.stringify(user));
-        }
-        catch ( /* localStorage indisponível */_a) { /* localStorage indisponível */ }
-    }
-    function goToLogin() {
-        try {
-            localStorage.removeItem(USER_KEY);
-        }
-        catch ( /* ignore */_a) { /* ignore */ }
-        window.location.href = "login.html";
-    }
-    function setText(selector, value) {
-        const element = document.querySelector(selector);
+    function setText(id, value) {
+        const element = $(id);
         if (element)
             element.textContent = value;
     }
-    function getInitial(name) {
-        return name.trim().charAt(0).toUpperCase() || "U";
+    // ---------- Toast ----------
+    let toastTimer = 0;
+    function toast(message, kind = "info") {
+        const element = $("toast");
+        if (!element)
+            return;
+        element.textContent = message;
+        element.className = `toast toast--${kind}`;
+        element.hidden = false;
+        window.clearTimeout(toastTimer);
+        toastTimer = window.setTimeout(() => { element.hidden = true; }, 4200);
     }
-    function getTimeContext(date = new Date()) {
-        const hour = date.getHours();
-        const greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
-        const dateLabel = new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "numeric", month: "long" }).format(date);
-        const dateValue = [date.getFullYear(), date.getMonth() + 1, date.getDate()].map((part) => String(part).padStart(2, "0")).join("-");
-        const message = hour < 12
-            ? "Comece o dia afinando sua escuta e avance um pouco na sua próxima aula."
-            : hour < 18
-                ? "Uma pausa para praticar agora pode deixar sua evolução ainda mais consistente."
-                : "Feche o dia com música: escolha uma aula e continue de onde parou.";
-        return { greeting, dateLabel, dateValue, message, dayIndex: (date.getDay() + 6) % 7 };
+    // ---------- Overlays (player e troca de instrumento) ----------
+    let lastFocused = null;
+    function openOverlay(id) {
+        var _a;
+        const overlay = $(id);
+        if (!overlay)
+            return;
+        lastFocused = document.activeElement;
+        overlay.hidden = false;
+        document.body.classList.add("no-scroll");
+        (_a = overlay.querySelector("[data-close]")) === null || _a === void 0 ? void 0 : _a.focus();
     }
-    function updateTimeContext(userName) {
-        const context = getTimeContext();
-        setText(".hero-greet h1", `${context.greeting}, ${userName}.`);
-        setText(".hero-greet p", context.message);
-        const dateElement = document.querySelector("#heroDate");
-        if (dateElement) {
-            dateElement.textContent = context.dateLabel;
-            dateElement.dateTime = context.dateValue;
+    function closeOverlay(id) {
+        var _a;
+        const overlay = $(id);
+        if (!overlay || overlay.hidden)
+            return;
+        overlay.hidden = true;
+        if (id === "playerOverlay") {
+            (_a = $("playerMedia")) === null || _a === void 0 ? void 0 : _a.replaceChildren();
+            currentLesson = null;
         }
-        document.querySelectorAll(".streak-day").forEach((day, index) => {
-            var _a;
-            day.classList.toggle("is-today", index === context.dayIndex);
-            day.setAttribute("aria-label", `${((_a = day.textContent) === null || _a === void 0 ? void 0 : _a.trim()) || "Dia"}${index === context.dayIndex ? ", hoje" : ""}`);
+        if (!document.querySelector(".overlay:not([hidden])"))
+            document.body.classList.remove("no-scroll");
+        if (lastFocused instanceof HTMLElement)
+            lastFocused.focus();
+    }
+    document.querySelectorAll(".overlay").forEach((overlay) => {
+        overlay.addEventListener("click", (event) => {
+            const target = event.target;
+            if (target === overlay || target.closest("[data-close]"))
+                closeOverlay(overlay.id);
         });
+    });
+    // ---------- Saudação e data ----------
+    function updateGreeting(name) {
+        const now = new Date();
+        const hour = now.getHours();
+        const greeting = hour < 5 ? "Boa noite" : hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
+        const firstName = name.trim().split(/\s+/)[0] || "";
+        setText("heroGreeting", firstName ? `${greeting}, ${firstName}.` : `${greeting}!`);
+        const date = $("heroDate");
+        if (date) {
+            date.textContent = new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "numeric", month: "long" }).format(now);
+            date.dateTime = [now.getFullYear(), now.getMonth() + 1, now.getDate()].map((part) => String(part).padStart(2, "0")).join("-");
+        }
+        const todayIndex = (now.getDay() + 6) % 7;
+        document.querySelectorAll(".streak-day").forEach((day, index) => day.classList.toggle("is-today", index === todayIndex));
     }
+    function heroMessage(data) {
+        const { completed_count: done, total_count: total } = data.journey;
+        if (!total)
+            return "Ainda não há aulas publicadas. Novos conteúdos chegam em breve!";
+        if (done >= total)
+            return "Você concluiu todos os conteúdos disponíveis. Novas aulas chegam em breve!";
+        const hour = new Date().getHours();
+        if (hour >= 5 && hour < 12)
+            return "Comece o dia afinando sua escuta e avance um pouco na sua próxima aula.";
+        if (hour >= 12 && hour < 18)
+            return "Uma pausa para praticar agora deixa sua evolução ainda mais consistente.";
+        return "Feche o dia com música: escolha uma aula e continue de onde parou.";
+    }
+    function renderUser(name, email, role) {
+        var _a, _b;
+        setText("userName", name.split(/\s+/)[0] || name);
+        setText("userAvatar", AppSession.initial(name));
+        setText("menuName", name);
+        setText("menuEmail", email);
+        const staff = role === "admin" || role === "teacher";
+        (_a = $("navAdmin")) === null || _a === void 0 ? void 0 : _a.toggleAttribute("hidden", !staff);
+        (_b = $("menuAdmin")) === null || _b === void 0 ? void 0 : _b.toggleAttribute("hidden", !staff);
+        updateGreeting(name);
+    }
+    // ---------- Conteúdos ----------
     function createLessonCard(lesson, groupName) {
-        const article = document.createElement("article");
-        article.className = "lesson-card";
-        article.innerHTML = `<div class="lesson-thumb lesson-thumb--violet"><button class="play-btn" aria-label="Assistir ${lesson.title}"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7Z"/></svg></button>${lesson.duration ? `<span class="lesson-duration">${lesson.duration}</span>` : ""}${lesson.badge ? `<span class="lesson-badge">${lesson.badge}</span>` : ""}</div><span class="lesson-tag">${groupName}</span><h3>${lesson.title}</h3><p class="lesson-teacher">${lesson.teacher ? `com ${lesson.teacher}` : lesson.level}</p>`;
-        return article;
-    }
-    function createLessonGroup(group) {
-        const wrapper = document.createElement("section");
-        wrapper.className = "lesson-group";
-        wrapper.dataset.instrument = group.instrument_slug;
-        const head = document.createElement("div");
-        head.className = "lesson-group-head";
-        head.innerHTML = `<h3>${group.instrument_name}</h3>${group.is_primary ? '<span class="lesson-group-tag">Seu instrumento</span>' : ""}`;
-        const row = document.createElement("div");
-        row.className = "lesson-row";
-        row.replaceChildren(...group.lessons.map((lesson) => createLessonCard(lesson, group.instrument_name)));
-        wrapper.append(head, row);
-        return wrapper;
+        const card = document.createElement("article");
+        card.className = `lesson-card${lesson.completed ? " is-completed" : ""}`;
+        const meta = [lesson.teacher ? `com ${lesson.teacher}` : "", lesson.level].filter(Boolean).join(" · ");
+        card.innerHTML = `
+      <button class="lesson-open" type="button" data-lesson="${esc(lesson.id)}" aria-label="Abrir ${esc(TYPE_LABEL[lesson.type])}: ${esc(lesson.title)}">
+        <div class="lesson-thumb lesson-thumb--${TYPE_THUMB[lesson.type]}">
+          <span class="play-btn">${svg(TYPE_ICON[lesson.type], 16)}</span>
+          ${lesson.duration ? `<span class="lesson-duration">${esc(lesson.duration)}</span>` : ""}
+          <span class="lesson-badge">${lesson.completed ? "✓ Concluída" : esc(TYPE_LABEL[lesson.type])}</span>
+        </div>
+        <span class="lesson-tag">${esc(groupName)}</span>
+        <h3>${esc(lesson.title)}</h3>
+        <p class="lesson-teacher">${esc(meta)}</p>
+      </button>`;
+        return card;
     }
     function renderLessonGroups(groups) {
-        const container = document.getElementById("lessonGroups");
-        const section = document.getElementById("lessons");
-        const tabs = document.getElementById("filterTabs");
+        const container = $("lessonGroups");
+        const tabs = $("filterTabs");
         if (!container || !tabs)
             return;
         if (!groups.length) {
-            section === null || section === void 0 ? void 0 : section.setAttribute("hidden", "");
+            tabs.replaceChildren();
+            container.innerHTML = '<div class="empty-card"><b>Nenhuma aula publicada ainda.</b><p>Assim que os professores publicarem conteúdos, eles aparecem aqui.</p></div>';
             return;
         }
-        section === null || section === void 0 ? void 0 : section.removeAttribute("hidden");
-        container.replaceChildren(...groups.map((group) => createLessonGroup(group)));
-        const tabButtons = [
-            { slug: "all", label: "Todas" },
-            ...groups.map((group) => ({ slug: group.instrument_slug, label: group.instrument_name })),
-        ];
-        tabs.replaceChildren(...tabButtons.map((tab, index) => {
+        container.replaceChildren(...groups.map((group) => {
+            const wrapper = document.createElement("section");
+            wrapper.className = "lesson-group";
+            wrapper.dataset.instrument = group.instrument_slug;
+            const done = group.lessons.filter((lesson) => lesson.completed).length;
+            wrapper.innerHTML = `<div class="lesson-group-head"><h3>${esc(group.instrument_name)}</h3>`
+                + `${group.is_primary ? '<span class="lesson-group-tag">Seu instrumento</span>' : ""}`
+                + `<span class="lesson-group-count">${done}/${group.lessons.length} concluídas</span></div>`;
+            const row = document.createElement("div");
+            row.className = "lesson-row";
+            row.replaceChildren(...group.lessons.map((lesson) => createLessonCard(lesson, group.instrument_name)));
+            wrapper.appendChild(row);
+            return wrapper;
+        }));
+        const tabItems = [{ slug: "all", label: "Todos" }, ...groups.map((group) => ({ slug: group.instrument_slug, label: group.instrument_name }))];
+        if (!tabItems.some((tab) => tab.slug === activeFilter))
+            activeFilter = "all";
+        tabs.replaceChildren(...tabItems.map((tab) => {
             const button = document.createElement("button");
             button.type = "button";
-            button.className = `filter-tab${index === 0 ? " active" : ""}`;
+            button.className = "filter-tab";
+            button.setAttribute("role", "tab");
             button.dataset.filter = tab.slug;
             button.textContent = tab.label;
             return button;
         }));
+        applyFilter(activeFilter);
     }
-    function createInstrumentCard(item) {
-        const link = document.createElement("a");
-        link.className = "instrument-card";
-        link.href = `#lessons`;
-        link.innerHTML = `<span class="instrument-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">${getInstrumentSvg(item.icon)}</svg></span><h3>${item.name}</h3><span class="instrument-meta">${item.meta}</span>`;
-        return link;
-    }
-    function getInstrumentSvg(icon) {
-        const map = {
-            violao: '<path d="M9 18V6l10-2v12"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/>',
-            piano: '<rect x="3" y="6" width="18" height="12" rx="1.5"/><path d="M7 6v12M11 6v12M15 6v12"/>',
-            bateria: '<ellipse cx="12" cy="8" rx="7" ry="3"/><path d="M5 8v7a7 3 0 0 0 14 0V8"/><path d="M12 15v4"/>',
-            violino: '<path d="M12 3c2.5 0 3 1.6 3 3s-1 2-1 3.5c2 .5 3.5 2.5 3.5 5A5.5 5.5 0 1 1 6.5 9c1.5 0 2-1 2-2 0-1.4.5-4 3.5-4Z"/><circle cx="12" cy="14.5" r="1.4"/>',
-            ukulele: '<path d="M10 17V7l6-1.2V15"/><circle cx="7.5" cy="17" r="2.5"/><circle cx="14" cy="15" r="2.5"/>',
-            canto: '<rect x="9" y="3" width="6" height="10" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3.5M9.5 20.5h5"/>',
-            guitarra: '<path d="M12 3c3 0 5.5 2.7 5.5 7 0 5-3 9-5.5 11-2.5-2-5.5-6-5.5-11C6.5 5.7 9 3 12 3Z"/><path d="M12 4v8"/>',
-            composicao: '<path d="M4 20l4-1 9-9-3-3-9 9-1 4Z"/><path d="M13 8l3-3"/>',
-        };
-        return map[icon] || map.violao;
-    }
-    function renderHomepage(data) {
-        if (!data.success)
-            return;
-        const user = data.user || { email: "" };
-        const hero = data.hero || {};
-        const journey = data.journey || {};
-        const displayName = user.name || "Aluno";
-        setText(".user-name", displayName);
-        const userAvatar = document.querySelector("#userChip .avatar");
-        if (userAvatar)
-            userAvatar.textContent = getInitial(displayName);
-        updateTimeContext(displayName);
-        renderLessonGroups(data.lesson_groups || []);
-        const instrumentGrid = document.getElementById("instrumentGrid");
-        if (instrumentGrid && data.instruments) {
-            instrumentGrid.replaceChildren(...data.instruments.map((item) => createInstrumentCard(item)));
-        }
-        if (journey.level)
-            setText(".level-ring-inner b", String(journey.level));
-        if (journey.xp_needed !== undefined && journey.level)
-            setText(".level-info p", `Faltam ${journey.xp_needed} XP para o nível ${journey.level + 1} — continue praticando para desbloquear o desafio semanal.`);
-        const levelProgress = document.querySelector(".level-info .progress-fill");
-        if (levelProgress)
-            levelProgress.style.width = `${journey.progress || 0}%`;
-        if (journey.xp_current !== undefined && journey.xp_goal)
-            setText(".level-info .progress-label", `${journey.xp_current} / ${journey.xp_goal} XP`);
-        const stats = hero.stats || [];
-        stats.forEach((stat) => {
-            const statPill = Array.from(document.querySelectorAll(".stat-pill")).find((pill) => { var _a; return (_a = pill.textContent) === null || _a === void 0 ? void 0 : _a.includes(stat.label); });
-            if (statPill)
-                statPill.querySelector("b").textContent = stat.label === "Nível" ? `Nível ${stat.value}` : stat.value;
+    function applyFilter(slug) {
+        activeFilter = slug;
+        document.querySelectorAll(".filter-tab").forEach((tab) => {
+            const active = tab.dataset.filter === slug;
+            tab.classList.toggle("active", active);
+            tab.setAttribute("aria-selected", String(active));
         });
-        setText(".streak-note", journey.streak ? `Pratique hoje para manter os ${journey.streak} dias seguidos.` : "Pratique hoje para começar sua sequência.");
-        if (journey.weekly_sequence)
-            document.querySelectorAll(".streak-day").forEach((day, index) => { var _a; return day.classList.toggle("is-done", Boolean((_a = journey.weekly_sequence) === null || _a === void 0 ? void 0 : _a[index])); });
-        if (journey.badges)
-            document.querySelectorAll(".badges-grid .badge").forEach((badge, index) => { var _a, _b; return badge.classList.toggle("is-locked", !((_b = (_a = journey.badges) === null || _a === void 0 ? void 0 : _a[index]) === null || _b === void 0 ? void 0 : _b.unlocked)); });
-        const leaderboard = document.querySelector(".leaderboard-list");
+        document.querySelectorAll(".lesson-group").forEach((group) => {
+            group.classList.toggle("is-hidden", slug !== "all" && group.dataset.instrument !== slug);
+        });
+    }
+    function findLesson(id) {
+        for (const group of (homepage === null || homepage === void 0 ? void 0 : homepage.lesson_groups) || []) {
+            const lesson = group.lessons.find((item) => item.id === id);
+            if (lesson)
+                return { lesson, groupName: group.instrument_name };
+        }
+        return null;
+    }
+    function renderContinue(groups) {
+        const card = $("continueCard");
+        if (!card)
+            return;
+        const group = groups.find((item) => item.lessons.some((lesson) => !lesson.completed));
+        const next = group === null || group === void 0 ? void 0 : group.lessons.find((lesson) => !lesson.completed);
+        if (!group || !next) {
+            card.hidden = true;
+            return;
+        }
+        const done = group.lessons.filter((lesson) => lesson.completed).length;
+        setText("continueTag", `${group.instrument_name} · ${TYPE_LABEL[next.type]}`);
+        setText("continueTitle", next.title);
+        setText("continueLabel", `${done} de ${group.lessons.length} concluídas em ${group.instrument_name}`);
+        setText("continueButton", done ? "Continuar" : "Começar");
+        const progress = $("continueProgress");
+        if (progress)
+            progress.style.width = `${Math.round((done / group.lessons.length) * 100)}%`;
+        $("continueButton").dataset.lesson = next.id;
+        card.hidden = false;
+    }
+    // ---------- Instrumentos ----------
+    function renderInstruments(instruments) {
+        const grid = $("instrumentGrid");
+        if (!grid)
+            return;
+        grid.replaceChildren(...instruments.map((item) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "instrument-card";
+            button.dataset.instrument = item.slug;
+            const meta = item.is_primary
+                ? "Seu instrumento principal"
+                : item.content_count ? `${item.content_count} ${item.content_count === 1 ? "conteúdo" : "conteúdos"}` : "Em breve";
+            button.innerHTML = `<span class="instrument-icon">${AppSession.instrumentIcon(item.slug)}</span>`
+                + `<h3>${esc(item.name)}</h3><span class="instrument-meta">${esc(meta)}</span>`;
+            return button;
+        }));
+    }
+    // ---------- Jornada ----------
+    function levelTitle(level) {
+        if (level >= 10)
+            return "Mestre do instrumento";
+        if (level >= 6)
+            return "Músico em evolução";
+        if (level >= 3)
+            return "Instrumentista dedicado";
+        return "Iniciante";
+    }
+    function renderJourney(journey) {
+        var _a;
+        const percent = journey.xp_per_level ? Math.round((journey.xp_in_level / journey.xp_per_level) * 100) : 0;
+        const missing = journey.xp_per_level - journey.xp_in_level;
+        setText("statStreak", String(journey.streak));
+        setText("statXpMonth", journey.xp_month.toLocaleString("pt-BR"));
+        setText("statLevel", `Nível ${journey.level}`);
+        setText("levelNumber", String(journey.level));
+        setText("levelTitle", levelTitle(journey.level));
+        setText("levelMessage", `Faltam ${missing} XP para o nível ${journey.level + 1}. Cada conteúdo concluído vale 20 XP.`);
+        setText("levelLabel", `${journey.xp_in_level} / ${journey.xp_per_level} XP · ${journey.xp_total.toLocaleString("pt-BR")} XP no total`);
+        (_a = $("levelRing")) === null || _a === void 0 ? void 0 : _a.style.setProperty("--ring", String(percent));
+        const bar = $("levelProgress");
+        if (bar)
+            requestAnimationFrame(() => { bar.style.width = `${percent}%`; });
+        document.querySelectorAll(".streak-day").forEach((day, index) => {
+            const done = Boolean(journey.weekly_sequence[index]);
+            day.classList.toggle("is-done", done);
+            day.setAttribute("aria-label", `${day.title}${done ? ": praticou" : ""}`);
+        });
+        const practicedToday = Boolean(journey.weekly_sequence[(new Date().getDay() + 6) % 7]);
+        setText("streakNote", journey.streak
+            ? practicedToday
+                ? `Você está há ${journey.streak} ${journey.streak === 1 ? "dia" : "dias"} seguidos praticando. Continue amanhã!`
+                : `Conclua uma aula hoje para manter seus ${journey.streak} ${journey.streak === 1 ? "dia" : "dias"} seguidos.`
+            : "Conclua uma aula hoje para começar sua sequência.");
+        const badges = $("badgesGrid");
+        if (badges) {
+            badges.innerHTML = journey.badges.length
+                ? journey.badges.map((badge) => `<div class="badge${badge.unlocked ? " is-unlocked" : ""}" title="${esc(badge.description)}">`
+                    + `${svg(badge.unlocked ? (BADGE_ICON[badge.slug] || BADGE_ICON["primeiro-passo"]) : LOCK_ICON)}`
+                    + `<span>${esc(badge.name)}</span></div>`).join("")
+                : '<p class="muted-note">Nenhuma conquista disponível.</p>';
+        }
+        const leaderboard = $("leaderboard");
         if (leaderboard) {
-            const ranking = journey.ranking || [];
-            if (ranking.length) {
-                leaderboard.replaceChildren(...ranking.map((entry) => {
-                    const item = document.createElement("li");
-                    if (entry.is_you)
-                        item.className = "is-you";
-                    const avatar = entry.is_you ? getInitial(displayName) : entry.avatar;
-                    const rankingName = entry.is_you ? `${displayName} (você)` : entry.name;
-                    item.innerHTML = `<span class="rank">${entry.rank}</span><span class="avatar avatar--sm">${avatar}</span><span class="lb-name">${rankingName}</span><span class="lb-xp">${entry.xp} XP</span>`;
-                    return item;
-                }));
+            const ranking = journey.ranking.filter((entry) => entry.xp > 0 || entry.is_you);
+            const someoneScored = ranking.some((entry) => entry.xp > 0);
+            leaderboard.innerHTML = someoneScored
+                ? ranking.map((entry) => `<li${entry.is_you ? ' class="is-you"' : ""}><span class="rank">${entry.rank}</span>`
+                    + `<span class="avatar avatar--sm" aria-hidden="true">${esc(AppSession.initial(entry.name))}</span>`
+                    + `<span class="lb-name">${esc(entry.name)}${entry.is_you ? " (você)" : ""}</span>`
+                    + `<span class="lb-xp">${entry.xp.toLocaleString("pt-BR")} XP</span></li>`).join("")
+                : '<li class="leaderboard-empty">Conclua aulas para aparecer no ranking.</li>';
+        }
+    }
+    function render(data) {
+        homepage = data;
+        renderUser(data.user.name, data.user.email, data.user.role);
+        setText("heroMessage", heroMessage(data));
+        renderContinue(data.lesson_groups);
+        renderLessonGroups(data.lesson_groups);
+        renderInstruments(data.instruments);
+        renderJourney(data.journey);
+    }
+    // ---------- Player ----------
+    function isHttpUrl(value) { return /^https?:\/\//i.test(value); }
+    function buildMedia(lesson) {
+        const url = isHttpUrl(lesson.media_url) ? lesson.media_url : "";
+        const wrap = document.createElement("div");
+        if (!url) {
+            wrap.className = "player-fallback";
+            wrap.textContent = "Este conteúdo está indisponível no momento.";
+            return wrap;
+        }
+        switch (lesson.media_kind) {
+            case "video": {
+                const video = document.createElement("video");
+                video.controls = true;
+                video.preload = "metadata";
+                video.playsInline = true;
+                video.src = url;
+                video.addEventListener("error", () => wrap.replaceChildren(fallback("Não foi possível reproduzir o vídeo aqui.", url)));
+                wrap.appendChild(video);
+                break;
             }
-            else {
-                leaderboard.innerHTML = '<li class="leaderboard-empty">Pratique para aparecer no ranking.</li>';
+            case "audio": {
+                const audio = document.createElement("audio");
+                audio.controls = true;
+                audio.preload = "metadata";
+                audio.src = url;
+                wrap.className = "player-audio";
+                wrap.appendChild(audio);
+                break;
             }
+            case "youtube":
+            case "vimeo":
+            case "pdf": {
+                const frame = document.createElement("iframe");
+                frame.src = url;
+                frame.title = lesson.title;
+                frame.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen";
+                frame.allowFullscreen = true;
+                frame.referrerPolicy = "strict-origin-when-cross-origin";
+                if (lesson.media_kind === "pdf")
+                    wrap.className = "player-pdf";
+                wrap.appendChild(frame);
+                break;
+            }
+            case "image": {
+                const image = document.createElement("img");
+                image.src = url;
+                image.alt = lesson.title;
+                wrap.appendChild(image);
+                break;
+            }
+            default:
+                wrap.appendChild(fallback("Este conteúdo abre no site de origem.", url));
         }
+        if (!wrap.className)
+            wrap.className = "player-frame";
+        return wrap;
     }
-    function animateProgress() {
-        document.querySelectorAll(".progress-fill[data-progress]").forEach((bar) => {
-            requestAnimationFrame(() => { bar.style.width = `${bar.dataset.progress || 0}%`; });
-        });
+    function fallback(message, url) {
+        const box = document.createElement("div");
+        box.className = "player-fallback";
+        const text = document.createElement("p");
+        text.textContent = message;
+        const link = document.createElement("a");
+        link.className = "btn-primary";
+        link.href = url;
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.textContent = "Abrir conteúdo ↗";
+        box.append(text, link);
+        return box;
     }
-    async function tryRefreshSession(user) {
-        if (!user.refresh_token)
-            return null;
-        try {
-            const response = await fetch(`${API_URL}/refresh`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ refresh_token: user.refresh_token }),
-            });
-            const data = await response.json();
-            if (!response.ok || !data.success || !data.access_token)
-                return null;
-            const updated = Object.assign(Object.assign({}, user), { access_token: data.access_token, refresh_token: data.refresh_token || user.refresh_token });
-            saveUser(updated);
-            return updated;
-        }
-        catch (_a) {
-            return null;
-        }
-    }
-    async function fetchHomepage(token) {
-        return fetch(`${API_URL}/homepage`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
-    }
-    async function loadHomepage() {
-        let user = getUserFromStorage();
-        if (!user || !user.access_token) {
-            goToLogin();
+    function updateCompleteButton(lesson) {
+        const button = $("completeButton");
+        if (!button)
             return;
+        button.disabled = lesson.completed;
+        button.textContent = lesson.completed ? "✓ Concluída" : "Marcar como concluída  +20 XP";
+    }
+    function openPlayer(id) {
+        var _a, _b;
+        const found = findLesson(id);
+        if (!found)
+            return;
+        currentLesson = found;
+        const { lesson, groupName } = found;
+        setText("playerTag", `${groupName} · ${TYPE_LABEL[lesson.type]}`);
+        setText("playerTitle", lesson.title);
+        setText("playerMeta", [lesson.teacher ? `com ${lesson.teacher}` : "", lesson.level, lesson.duration].filter(Boolean).join(" · "));
+        setText("playerDescription", lesson.description);
+        (_a = $("playerDescription")) === null || _a === void 0 ? void 0 : _a.toggleAttribute("hidden", !lesson.description);
+        (_b = $("playerMedia")) === null || _b === void 0 ? void 0 : _b.replaceChildren(buildMedia(lesson));
+        const external = $("playerExternal");
+        if (external) {
+            const usable = isHttpUrl(lesson.media_url);
+            external.hidden = !usable;
+            external.href = usable ? lesson.media_url : "#";
         }
+        updateCompleteButton(lesson);
+        openOverlay("playerOverlay");
+    }
+    (_a = $("completeButton")) === null || _a === void 0 ? void 0 : _a.addEventListener("click", async () => {
+        if (!currentLesson || currentLesson.lesson.completed)
+            return;
+        const button = $("completeButton");
+        const lesson = currentLesson.lesson;
+        button.disabled = true;
+        button.textContent = "Salvando…";
         try {
-            let response = await fetchHomepage(user.access_token);
-            if (response.status === 401) {
-                const refreshed = await tryRefreshSession(user);
-                if (!refreshed) {
-                    goToLogin();
-                    return;
-                }
-                user = refreshed;
-                response = await fetchHomepage(user.access_token);
-            }
-            if (response.status === 401) {
-                goToLogin();
-                return;
-            }
-            const data = await response.json();
-            if (!data.success) {
-                console.error("Não foi possível carregar a homepage:", data.message);
-                return;
-            }
-            renderHomepage(data);
-            animateProgress();
+            const result = await AppSession.api(`/content/${encodeURIComponent(lesson.id)}/complete`, { method: "POST" });
+            lesson.completed = true;
+            updateCompleteButton(lesson);
+            const badges = result.new_badges || [];
+            toast(badges.length ? `${result.message} Nova conquista: ${badges.join(", ")}!` : result.message, "success");
+            await loadHomepage();
         }
         catch (error) {
-            console.error("Erro ao carregar homepage:", error);
+            if (error instanceof AppApiError && error.status === 401)
+                return;
+            toast(error instanceof Error ? error.message : "Não foi possível salvar.", "error");
+            updateCompleteButton(lesson);
+        }
+    });
+    // ---------- Troca de instrumento principal ----------
+    async function openInstrumentDialog(required = false) {
+        const picker = $("instrumentPicker");
+        if (!picker)
+            return;
+        setText("instrumentDialogTitle", required ? "Escolha seu instrumento principal" : "Seu instrumento principal");
+        setText("instrumentFormError", "");
+        picker.innerHTML = '<span class="muted-note">Carregando…</span>';
+        openOverlay("instrumentOverlay");
+        const instruments = (await AppSession.loadInstruments()).slice().sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+        const current = (homepage === null || homepage === void 0 ? void 0 : homepage.user.primary_instrument) || "";
+        picker.innerHTML = instruments.map((item) => `<label class="instrument-option">`
+            + `<input type="radio" name="primaryInstrument" value="${esc(item.slug)}"${item.slug === current ? " checked" : ""}>`
+            + `<span class="instrument-option-icon">${AppSession.instrumentIcon(item.slug, 22)}</span>`
+            + `<span class="instrument-option-name">${esc(item.name)}</span></label>`).join("");
+    }
+    (_b = $("instrumentForm")) === null || _b === void 0 ? void 0 : _b.addEventListener("submit", async (event) => {
+        var _a;
+        event.preventDefault();
+        const selected = (_a = document.querySelector('input[name="primaryInstrument"]:checked')) === null || _a === void 0 ? void 0 : _a.value;
+        if (!selected) {
+            setText("instrumentFormError", "Escolha um instrumento.");
+            return;
+        }
+        const button = $("instrumentSave");
+        button.disabled = true;
+        try {
+            await AppSession.api("/profile/instrument", { method: "POST", json: { instrument_slug: selected } });
+            closeOverlay("instrumentOverlay");
+            activeFilter = "all";
+            toast("Instrumento principal atualizado.", "success");
+            await loadHomepage();
+        }
+        catch (error) {
+            setText("instrumentFormError", error instanceof Error ? error.message : "Não foi possível salvar.");
+        }
+        finally {
+            button.disabled = false;
+        }
+    });
+    // ---------- Carregamento ----------
+    async function loadHomepage() {
+        var _a, _b;
+        try {
+            const data = await AppSession.api("/homepage", { method: "POST" });
+            (_a = $("loadError")) === null || _a === void 0 ? void 0 : _a.setAttribute("hidden", "");
+            render(data);
+            const user = AppSession.getUser();
+            if (user)
+                AppSession.saveUser(Object.assign(Object.assign({}, user), { email: data.user.email, name: data.user.name, role: data.user.role }));
+            if (firstLoad) {
+                firstLoad = false;
+                if (data.user.role === "student" && !data.user.primary_instrument)
+                    openInstrumentDialog(true);
+            }
+        }
+        catch (error) {
+            if (error instanceof AppApiError && error.status === 401)
+                return;
+            (_b = $("loadError")) === null || _b === void 0 ? void 0 : _b.removeAttribute("hidden");
+            setText("heroMessage", error instanceof Error ? error.message : "Não foi possível carregar suas aulas.");
+            if (!homepage) {
+                const groups = $("lessonGroups");
+                if (groups)
+                    groups.innerHTML = "";
+            }
         }
     }
-    window.setInterval(() => {
-        const user = getUserFromStorage();
-        if (user)
-            updateTimeContext(user.name || "Usuário");
-    }, 60000);
-    (_a = document.getElementById("navToggle")) === null || _a === void 0 ? void 0 : _a.addEventListener("click", () => {
-        const nav = document.getElementById("navLinks");
-        const toggle = document.getElementById("navToggle");
+    // ---------- Eventos ----------
+    document.addEventListener("click", (event) => {
+        var _a;
+        const target = event.target;
+        const opener = target.closest("[data-lesson]");
+        if (opener === null || opener === void 0 ? void 0 : opener.dataset.lesson) {
+            openPlayer(opener.dataset.lesson);
+            return;
+        }
+        const tab = target.closest(".filter-tab");
+        if (tab) {
+            applyFilter(tab.dataset.filter || "all");
+            return;
+        }
+        const instrumentCard = target.closest(".instrument-card");
+        if (instrumentCard === null || instrumentCard === void 0 ? void 0 : instrumentCard.dataset.instrument) {
+            const slug = instrumentCard.dataset.instrument;
+            const item = homepage === null || homepage === void 0 ? void 0 : homepage.instruments.find((instrument) => instrument.slug === slug);
+            if (!(item === null || item === void 0 ? void 0 : item.content_count)) {
+                toast(`Ainda não há conteúdos de ${(item === null || item === void 0 ? void 0 : item.name) || "este instrumento"}. Em breve!`);
+                return;
+            }
+            applyFilter(slug);
+            (_a = $("lessons")) === null || _a === void 0 ? void 0 : _a.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+    });
+    (_c = $("retryButton")) === null || _c === void 0 ? void 0 : _c.addEventListener("click", () => { loadHomepage(); });
+    (_d = $("navToggle")) === null || _d === void 0 ? void 0 : _d.addEventListener("click", () => {
+        const nav = $("navLinks");
+        const toggle = $("navToggle");
         if (!nav || !toggle)
             return;
         const isOpen = nav.classList.toggle("is-open");
         toggle.setAttribute("aria-expanded", String(isOpen));
     });
-    (_b = document.getElementById("filterTabs")) === null || _b === void 0 ? void 0 : _b.addEventListener("click", (event) => {
-        const target = event.target;
-        const button = target.closest(".filter-tab");
-        if (!button)
-            return;
-        document.querySelectorAll(".filter-tab").forEach((tab) => tab.classList.toggle("active", tab === button));
-        const filter = button.dataset.filter || "all";
-        document.querySelectorAll(".lesson-group").forEach((group) => {
-            group.classList.toggle("is-hidden", filter !== "all" && group.dataset.instrument !== filter);
-        });
+    (_e = $("navLinks")) === null || _e === void 0 ? void 0 : _e.addEventListener("click", (event) => {
+        var _a, _b;
+        if (event.target.closest("a")) {
+            (_a = $("navLinks")) === null || _a === void 0 ? void 0 : _a.classList.remove("is-open");
+            (_b = $("navToggle")) === null || _b === void 0 ? void 0 : _b.setAttribute("aria-expanded", "false");
+        }
     });
-    const userChip = document.getElementById("userChip");
-    const userMenu = document.getElementById("userMenu");
+    const userChip = $("userChip");
+    const userMenu = $("userMenu");
     const closeUserMenu = () => { userMenu === null || userMenu === void 0 ? void 0 : userMenu.classList.remove("is-open"); userChip === null || userChip === void 0 ? void 0 : userChip.setAttribute("aria-expanded", "false"); };
-    userChip === null || userChip === void 0 ? void 0 : userChip.addEventListener("click", () => {
+    userChip === null || userChip === void 0 ? void 0 : userChip.addEventListener("click", (event) => {
+        event.stopPropagation();
         const isOpen = (userMenu === null || userMenu === void 0 ? void 0 : userMenu.classList.toggle("is-open")) || false;
         userChip.setAttribute("aria-expanded", String(isOpen));
     });
-    (_c = document.getElementById("logoutButton")) === null || _c === void 0 ? void 0 : _c.addEventListener("click", () => { goToLogin(); });
     document.addEventListener("click", (event) => {
-        var _a;
-        if (!((_a = event.target.parentElement) === null || _a === void 0 ? void 0 : _a.closest(".user-menu-wrap")))
+        if (!event.target.closest(".user-menu-wrap"))
             closeUserMenu();
     });
-    document.addEventListener("keydown", (event) => { if (event.key === "Escape")
-        closeUserMenu(); });
-    if (document.readyState === "loading")
-        document.addEventListener("DOMContentLoaded", () => { loadHomepage(); });
-    else
-        loadHomepage();
+    (_f = $("changeInstrumentButton")) === null || _f === void 0 ? void 0 : _f.addEventListener("click", () => { closeUserMenu(); openInstrumentDialog(); });
+    (_g = $("logoutButton")) === null || _g === void 0 ? void 0 : _g.addEventListener("click", () => { AppSession.logout(); });
+    document.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape")
+            return;
+        closeUserMenu();
+        document.querySelectorAll(".overlay:not([hidden])").forEach((overlay) => closeOverlay(overlay.id));
+    });
+    setText("footerCopy", `© ${new Date().getFullYear()} The Instrumentalist`);
+    renderUser(storedUser.name || "", storedUser.email || "", storedUser.role || "student");
+    window.setInterval(() => updateGreeting((homepage === null || homepage === void 0 ? void 0 : homepage.user.name) || storedUser.name || ""), 60000);
+    loadHomepage();
 })();

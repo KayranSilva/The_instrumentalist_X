@@ -234,16 +234,6 @@ a:focus-visible, button:focus-visible, input:focus-visible{
   cursor:pointer;
 }
 
-.notif-dot{
-  position:absolute;
-  top:8px;
-  right:9px;
-  width:7px;
-  height:7px;
-  border-radius:50%;
-  background:var(--yellow-500);
-  border:1.5px solid var(--white);
-}
 
 .user-chip{
   display:flex;
@@ -751,46 +741,6 @@ a:focus-visible, button:focus-visible, input:focus-visible{
 .leaderboard-list li.is-you .lb-name{color:var(--violet-700);}
 .leaderboard-list .lb-name{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 
-/* ---------- Community CTA ---------- */
-.community-card{
-  background:linear-gradient(120deg, var(--violet-800), var(--violet-700));
-  border-radius:var(--radius-lg);
-  padding:44px;
-  display:grid;
-  grid-template-columns:1.2fr 0.8fr;
-  align-items:center;
-  gap:24px;
-  overflow:hidden;
-  position:relative;
-}
-
-.community-copy h2{font-size:26px; color:var(--white);}
-.community-copy p{
-  display:block;
-  margin:14px 0 22px;
-  font-size:14.5px;
-  line-height:1.6;
-  color:var(--lavender-100);
-  opacity:0.85;
-  max-width:420px;
-}
-
-.community-copy .btn-primary{
-  background:linear-gradient(120deg, var(--yellow-500), var(--yellow-400));
-  color:var(--violet-900);
-}
-
-.community-figure{
-  border-radius:var(--radius-md);
-  overflow:hidden;
-  max-height:220px;
-}
-.community-figure img{
-  width:100%;
-  height:220px;
-  object-fit:cover;
-}
-
 /* ---------- Footer ---------- */
 .site-footer{
   border-top:1px solid var(--border);
@@ -832,9 +782,6 @@ a:focus-visible, button:focus-visible, input:focus-visible{
   .hero-cards{grid-template-columns:1fr;}
   .journey-grid{grid-template-columns:1fr 1fr;}
   .level-card{grid-column:span 2;}
-  .community-card{grid-template-columns:1fr;}
-  .community-figure{max-height:180px;}
-  .community-figure img{height:180px;}
 }
 
 @media (max-width: 640px){
@@ -848,8 +795,6 @@ a:focus-visible, button:focus-visible, input:focus-visible{
   .section{padding:44px 18px;}
   .journey-grid{grid-template-columns:1fr;}
   .level-card{grid-column:span 1; flex-direction:column; text-align:center;}
-  .community-card{padding:28px;}
-  .community-copy h2{font-size:23px;}
   .footer-inner{padding:24px 18px; align-items:flex-start;}
   .footer-links{width:100%; flex-wrap:wrap; gap:12px 18px;}
 }
@@ -896,4 +841,240 @@ a:focus-visible, button:focus-visible, input:focus-visible{
     gap:12px;
   }
   .topbar{position:sticky;}
+}
+
+
+/* =================================================================
+   Estados, player, modais e avisos
+   ================================================================= */
+[hidden]{display:none !important;}
+body.no-scroll{overflow:hidden;}
+
+.chevron{color:var(--ink-soft);}
+.nav-links a.nav-admin{color:var(--violet-700);}
+
+.user-menu{min-width:230px;}
+.user-menu-head{padding:10px 12px; border-bottom:1px solid var(--lavender-100); margin-bottom:4px;}
+.user-menu-head b{display:block; font-size:13.5px; color:var(--ink);}
+.user-menu-head span{display:block; font-size:12px; color:var(--ink-soft); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+a.logout-button{display:block;}
+.logout-button--danger{color:#a33030;}
+.logout-button--danger:hover,.logout-button--danger:focus-visible{background:#fdf1f1; color:#a33030;}
+
+.continue-card[hidden] + .stat-rail{grid-column:1 / -1; flex-direction:row; flex-wrap:wrap;}
+.continue-card[hidden] + .stat-rail .stat-pill{flex:1 1 200px;}
+.continue-info{min-width:0;}
+.continue-info h3{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+
+.load-error{
+  max-width:1180px;
+  margin:28px auto 0;
+  padding:18px 22px;
+  border-radius:var(--radius-md);
+  border:1px solid #f3cfcf;
+  background:#fdf1f1;
+  color:#a33030;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  flex-wrap:wrap;
+}
+@media (max-width:1236px){.load-error{margin:28px 28px 0;}}
+
+/* Cartão de aula: o cartão inteiro é um botão */
+.lesson-card{padding:0; overflow:hidden;}
+.lesson-open{
+  display:block;
+  width:100%;
+  height:100%;
+  padding:14px;
+  border:0;
+  background:transparent;
+  text-align:left;
+  color:inherit;
+  font:inherit;
+  cursor:pointer;
+}
+.lesson-open:hover .play-btn{transform:scale(1.08);}
+.play-btn{transition:transform .15s ease; pointer-events:none;}
+.lesson-thumb--yellow .play-btn{color:var(--violet-900);}
+.lesson-card.is-completed .lesson-badge{background:var(--teal-100); color:var(--teal-600);}
+.lesson-card h3{overflow-wrap:anywhere;}
+.lesson-teacher{margin-bottom:0;}
+
+.lesson-group-count{margin-left:auto; font-size:12px; color:var(--ink-soft); font-weight:600;}
+
+.empty-card{
+  border:1.5px dashed var(--border);
+  border-radius:var(--radius-md);
+  padding:36px 24px;
+  text-align:center;
+  color:var(--ink-soft);
+  font-size:14px;
+  line-height:1.6;
+}
+.empty-card b{display:block; color:var(--violet-900); font-size:15px; margin-bottom:4px;}
+
+.skeleton{
+  height:220px;
+  background:linear-gradient(100deg, var(--lavender-100) 30%, #fbfaff 50%, var(--lavender-100) 70%);
+  background-size:300% 100%;
+  animation:skeleton 1.4s ease-in-out infinite;
+  border-color:transparent;
+}
+@keyframes skeleton{from{background-position:100% 0;} to{background-position:0 0;}}
+
+/* Cartão de instrumento virou botão */
+button.instrument-card{
+  font:inherit;
+  text-align:left;
+  cursor:pointer;
+  color:inherit;
+  width:100%;
+}
+
+.muted-note{font-size:12.5px; color:var(--ink-soft);}
+.leaderboard-list li.leaderboard-empty{display:block; color:var(--ink-soft); font-size:12.5px; border:0;}
+
+/* ---------- Overlay / diálogo ---------- */
+.overlay{
+  position:fixed;
+  inset:0;
+  z-index:80;
+  background:rgba(28,21,48,0.6);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  animation:fade-in .16s ease;
+}
+@keyframes fade-in{from{opacity:0;} to{opacity:1;}}
+
+.dialog{
+  width:100%;
+  max-width:520px;
+  max-height:calc(100vh - 40px);
+  overflow:auto;
+  background:var(--white);
+  border-radius:var(--radius-md);
+  padding:24px;
+  box-shadow:0 30px 60px -20px rgba(28,21,48,.45);
+}
+.dialog--player{max-width:880px;}
+
+.dialog-head{display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:16px;}
+.dialog-head h2{font-size:22px; color:var(--violet-900); margin-top:4px; overflow-wrap:anywhere;}
+.dialog-meta{font-size:13px; color:var(--ink-soft); margin-top:6px; line-height:1.5;}
+.dialog-close{
+  flex:none;
+  width:34px;
+  height:34px;
+  border-radius:50%;
+  border:0;
+  background:var(--lavender-100);
+  color:var(--violet-700);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+}
+.dialog-actions{display:flex; align-items:center; justify-content:space-between; gap:14px; margin-top:20px; flex-wrap:wrap;}
+.dialog-actions .btn-primary:disabled{opacity:.7; cursor:default; transform:none;}
+
+.player-frame, .player-pdf{
+  position:relative;
+  width:100%;
+  aspect-ratio:16 / 9;
+  background:#120c22;
+  border-radius:var(--radius-sm);
+  overflow:hidden;
+}
+.player-pdf{aspect-ratio:auto; height:min(70vh, 720px); background:var(--lavender-100);}
+.player-frame iframe, .player-frame video, .player-pdf iframe{
+  position:absolute; inset:0; width:100%; height:100%; border:0; display:block;
+}
+.player-frame img{width:100%; height:100%; object-fit:contain;}
+.player-audio{padding:28px 18px; background:var(--lavender-100); border-radius:var(--radius-sm);}
+.player-audio audio{width:100%;}
+.player-fallback{
+  padding:40px 20px;
+  text-align:center;
+  background:var(--lavender-100);
+  border-radius:var(--radius-sm);
+  color:var(--ink-soft);
+  font-size:14px;
+}
+.player-fallback p{margin-bottom:16px;}
+.player-fallback .btn-primary{display:inline-block;}
+.player-description{margin-top:16px; font-size:14px; line-height:1.65; color:var(--ink); white-space:pre-line;}
+
+/* ---------- Seletor de instrumento ---------- */
+.instrument-picker{display:grid; grid-template-columns:repeat(4, 1fr); gap:8px;}
+.instrument-option{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+  padding:12px 6px 10px;
+  border-radius:var(--radius-sm);
+  background:var(--lavender-100);
+  border:1.5px solid transparent;
+  cursor:pointer;
+  text-align:center;
+}
+.instrument-option:hover{border-color:var(--violet-300);}
+.instrument-option input{position:absolute; opacity:0; pointer-events:none;}
+.instrument-option-icon{color:var(--violet-700); display:flex;}
+.instrument-option-name{font-size:12px; font-weight:600; color:var(--ink);}
+.instrument-option:has(input:checked){background:var(--white); border-color:var(--violet-500); box-shadow:0 0 0 3px rgba(123,79,224,.15);}
+.instrument-option:has(input:focus-visible){outline:2.5px solid var(--violet-500); outline-offset:2px;}
+.form-error{min-height:18px; margin-top:10px; font-size:12.5px; color:#a33030;}
+
+/* ---------- Toast ---------- */
+.toast{
+  position:fixed;
+  left:50%;
+  bottom:24px;
+  transform:translateX(-50%);
+  z-index:90;
+  max-width:min(92vw, 460px);
+  padding:13px 18px;
+  border-radius:var(--radius-sm);
+  background:var(--violet-900);
+  color:var(--white);
+  font-size:14px;
+  font-weight:500;
+  line-height:1.45;
+  box-shadow:0 18px 40px -16px rgba(28,21,48,.6);
+  animation:fade-in .16s ease;
+}
+.toast--success{background:#1f6b4f;}
+.toast--error{background:#8f2a2a;}
+
+@media (max-width:640px){
+  .dialog{padding:18px;}
+  .dialog-head h2{font-size:19px;}
+  .instrument-picker{grid-template-columns:repeat(2, 1fr);}
+  .dialog-actions .btn-primary{width:100%;}
+  .lesson-group-head{flex-wrap:wrap;}
+}
+
+/* Ajustes de layout */
+.lesson-row{grid-template-columns:repeat(auto-fill, minmax(min(100%, 240px), 1fr));}
+.level-info .progress-label{color:var(--ink-soft); opacity:1;}
+.hero-date{text-transform:none; display:inline-block;}
+.hero-date::first-letter{text-transform:uppercase;}
+.journey-grid{grid-template-columns:1.5fr 1fr 1fr 1.1fr;}
+.level-card{grid-column:auto; flex-direction:column; align-items:flex-start; text-align:left;}
+@media (max-width:980px){
+  .journey-grid{grid-template-columns:1fr 1fr;}
+  .level-card{grid-column:span 2; flex-direction:row; align-items:center;}
+  .leaderboard-card{grid-column:span 2;}
+}
+@media (max-width:640px){
+  .journey-grid{grid-template-columns:1fr;}
+  .level-card, .leaderboard-card{grid-column:span 1; flex-direction:column; text-align:center; align-items:center;}
+  .level-info{width:100%;}
 }
