@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Perfil — The Instrumentalist</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="community.css">
+  <link rel="stylesheet" href="community-theme.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="home.html"><span class="brand-mark">I</span><span class="brand-name">The Instrumentalist</span></a>
+      <nav class="nav-links">
+        <a href="home.html">Início</a>
+        <a href="community.html">Comunidade</a>
+        <a class="active" href="profile.html">Meu perfil</a>
+        <a href="home.html#lessons">Aulas</a>
+      </nav>
+      <button id="logout" class="quiet" type="button">Sair</button>
+    </div>
+  </header>
+  <main class="layout profile-layout">
+    <a class="profile-back" href="community.html">← Voltar à comunidade</a>
+    <section id="profileCard" class="profile-card panel" aria-live="polite">
+      <div class="empty">Carregando perfil…</div>
+    </section>
+    <p id="profileFeedback" class="profile-feedback" role="status" hidden></p>
+    <section class="feed-section profile-feed">
+      <div class="section-title"><div><h2 id="profileFeedTitle">Publicações</h2><p>Ideias, conquistas e músicas compartilhadas.</p></div></div>
+      <div id="profileFeed" class="stack"><div class="empty">Carregando publicações…</div></div>
+    </section>
+  </main>
+  <script src="session.js"></script>
+  <script src="profile.js"></script>
+</body>
+</html>

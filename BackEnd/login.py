@@ -8,12 +8,13 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
 from urllib.request import Request, urlopen
 
 import supabase_client
 from content import MAX_UPLOAD_MB, create_content, delete_content, is_uuid, list_content, list_teachers, update_content
 from homepage import complete_content, get_homepage_data
+import community as community_api
 from supabase_client import SupabaseError, bearer_token_from_header, translate_message
 
 SUPABASE_URL = supabase_client.SUPABASE_URL
@@ -478,6 +479,19 @@ class LoginRequestHandler(BaseHTTPRequestHandler):
             self._send_json(*list_instruments())
             return
 
+        if route == "/community":
+            token = self._require_token()
+            if not token: return
+            self._send_json(*community_api.dashboard(token))
+            return
+
+        if route == "/community/profile":
+            token = self._require_token()
+            if not token: return
+            profile_id = parse_qs(urlparse(self.path).query).get("id", [""])[0]
+            self._send_json(*community_api.user_profile(token, profile_id))
+            return
+
         authenticated_routes = {
             "/me": current_user,
             "/admin/content": list_content,
@@ -522,6 +536,22 @@ class LoginRequestHandler(BaseHTTPRequestHandler):
             response, status = recover_account(payload.get("email", ""), _safe_redirect(payload.get("redirect_to")))
         elif route == "/refresh":
             response, status = refresh_tokens(payload.get("refresh_token", ""))
+        elif route == "/community/posts":
+            response, status = community_api.create_post(token, payload)
+        elif route == "/community/follow":
+            response, status = community_api.follow(token, payload)
+        elif route == "/community/comments":
+            response, status = community_api.create_comment(token, payload)
+        elif route == "/community/likes":
+            response, status = community_api.toggle_like(token, payload)
+        elif route == "/community/groups":
+            response, status = community_api.create_group(token, payload)
+        elif route == "/community/groups/join":
+            response, status = community_api.join_group(token, payload)
+        elif route == "/community/groups/posts":
+            response, status = community_api.create_group_post(token, payload)
+        elif route == "/community/announcements":
+            response, status = community_api.create_announcement(token, payload)
         elif route == "/logout":
             response, status = logout(token)
         elif route == "/password":
