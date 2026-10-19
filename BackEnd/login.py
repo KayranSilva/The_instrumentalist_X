@@ -378,38 +378,106 @@ class LoginRequestHandler(BaseHTTPRequestHandler):
         return token
 
     def _read_request_body(self) -> Optional[bytes]:
-        """Lê o corpo respeitando o limite de tamanho. None = já respondeu 413."""
-        if self.headers.get("Transfer-Encoding", "").lower() == "chunked":
-            chunks, total = [], 0
+        """Lê o corpo respeitando o limite de tamanho.
+
+        Retorna None quando a resposta já foi enviada ao cliente.
+        """
+        transfer_encoding = self.headers.get("Transfer-Encoding", "").lower()
+
+        if transfer_encoding == "chunked":
+            chunks: list[bytes] = []
+            total = 0
+
             while True:
-                size_line = self.rfile.readline().strip()
+                size_line = self.rfile.readline()
+
+                # EOF inesperado: sem isso, readline() retornando b""
+                # provocaria um loop infinito.
+                if size_line == b"":
+                    self._send_bad_request("Corpo chunked incompleto.")
+                    return None
+
+                size_line = size_line.strip()
                 if not size_line:
                     continue
-                size = int(size_line.split(b";", 1)[0], 16)
+
+                raw_size = size_line.split(b";", 1)[0].strip()
+
+                try:
+                    size = int(raw_size, 16)
+                except ValueError:
+                    self._send_bad_request("Tamanho de chunk inválido.")
+                    return None
+
+                if size < 0:
+                    self._send_bad_request("Tamanho de chunk inválido.")
+                    return None
+
                 if size == 0:
-                    while self.rfile.readline().strip():
-                        pass
-                    break
+                    # Lê os trailers até a linha vazia.
+                    while True:
+                        trailer = self.rfile.readline()
+                        if trailer == b"":
+                            self._send_bad_request("Trailer chunked incompleto.")
+                            return None
+                        if trailer in {b"\r\n", b"\n"}:
+                            break
+                    return b"".join(chunks)
+
                 total += size
                 if total > self.MAX_BODY_SIZE:
                     self._send_too_large()
                     return None
-                chunks.append(self.rfile.read(size))
-                self.rfile.read(2)
-            return b"".join(chunks)
+
+                chunk = self.rfile.read(size)
+                if len(chunk) != size:
+                    self._send_bad_request("Corpo da requisição incompleto.")
+                    return None
+
+                terminator = self.rfile.read(2)
+                if terminator != b"\r\n":
+                    self._send_bad_request("Separador de chunk inválido.")
+                    return None
+
+                chunks.append(chunk)
+
+        content_length_header = self.headers.get("Content-Length", "0") or "0"
 
         try:
-            content_length = int(self.headers.get("Content-Length", "0") or 0)
+            content_length = int(content_length_header)
         except ValueError:
-            content_length = 0
+            self._send_bad_request("Content-Length inválido.")
+            return None
+
+        if content_length < 0:
+            self._send_bad_request("Content-Length inválido.")
+            return None
+
         if content_length > self.MAX_BODY_SIZE:
             self._send_too_large()
             return None
-        return self.rfile.read(content_length) if content_length > 0 else b""
+
+        body = self.rfile.read(content_length)
+
+        if len(body) != content_length:
+            self._send_bad_request("Corpo da requisição incompleto.")
+            return None
+
+        return body
 
     def _send_too_large(self) -> None:
         self.close_connection = True
         self._send_json({"success": False, "message": f"O arquivo excede o limite de {MAX_UPLOAD_MB} MB."}, 413)
+
+    def _send_bad_request(self, message: str = "Requisição inválida.") -> None:
+        self.close_connection = True
+        self._send_json(
+            {
+                "success": False,
+                "message": message,
+            },
+            400,
+        )
 
     def _parse_body(self) -> Optional[Tuple[Dict[str, Any], Optional[Tuple[str, bytes]]]]:
         raw_body = self._read_request_body()
@@ -510,17 +578,21 @@ class LoginRequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         route = self._route()
-        parsed = self._parse_body()
-        if parsed is None:
-            return
-        payload, upload = parsed
 
         public_routes = {"/register", "/login", "/recover", "/refresh"}
         token = ""
+
+        # Valida a sessão antes de aceitar um corpo potencialmente grande.
         if route not in public_routes:
             token = self._require_token()
             if not token:
                 return
+
+        parsed = self._parse_body()
+        if parsed is None:
+            return
+
+        payload, upload = parsed
 
         if route == "/register":
             response, status = register_user(
@@ -581,17 +653,35 @@ class LoginRequestHandler(BaseHTTPRequestHandler):
     def do_PATCH(self):
         route = self._route()
         prefix = "/admin/content/"
+
         if not route.startswith(prefix):
-            self._send_json({"success": False, "message": "Rota não encontrada."}, 404)
+            self._send_json(
+                {
+                    "success": False,
+                    "message": "Rota não encontrada.",
+                },
+                404,
+            )
             return
-        parsed = self._parse_body()
-        if parsed is None:
-            return
+
         token = self._require_token()
         if not token:
             return
+
+        parsed = self._parse_body()
+        if parsed is None:
+            return
+
         payload, upload = parsed
-        self._send_json(*update_content(token, route[len(prefix):], payload, upload))
+
+        self._send_json(
+            *update_content(
+                token,
+                route[len(prefix):],
+                payload,
+                upload,
+            )
+        )
 
     def do_DELETE(self):
         route = self._route()

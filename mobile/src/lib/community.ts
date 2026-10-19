@@ -52,10 +52,17 @@ export async function fetchDashboard(): Promise<Dashboard> {
   const [posts, comments, likes, follows, followers, profiles, groups, memberships, groupPosts, announcements] = await Promise.all([
     supabase.from("community_posts").select("id,author_id,body,music_url,music_title,created_at").order("created_at", { ascending: false }).limit(50),
     supabase.from("community_comments").select("id,post_id,author_id,body,created_at").order("created_at").limit(300),
-    supabase.from("community_likes").select("post_id,user_id"),
+    supabase
+      .from("community_likes")
+      .select("post_id,user_id")
+      .limit(5000),
     supabase.from("community_follows").select("following_id").eq("follower_id", userId),
     supabase.from("community_follows").select("follower_id").eq("following_id", userId),
-    supabase.from("profiles").select("id,display_name,avatar_url,role").order("display_name").limit(100),
+    supabase
+      .from("community_profiles")
+      .select("id,display_name,avatar_url,role")
+      .order("display_name")
+      .limit(100),
     supabase.from("community_groups").select("id,name,description,created_at,owner_id").order("created_at", { ascending: false }).limit(50),
     supabase.from("community_group_members").select("group_id").eq("user_id", userId),
     supabase.from("community_group_posts").select("id,group_id,author_id,body,created_at").order("created_at", { ascending: false }).limit(100),
@@ -95,7 +102,11 @@ export type PublicProfile = {
 export async function fetchPublicProfile(profileId: string): Promise<PublicProfile | null> {
   const userId = await uid();
   const [profile, posts, followers, following] = await Promise.all([
-    supabase.from("profiles").select("id,display_name,avatar_url,role").eq("id", profileId).maybeSingle(),
+    supabase
+      .from("community_profiles")
+      .select("id,display_name,avatar_url,role")
+      .eq("id", profileId)
+      .maybeSingle(),
     supabase.from("community_posts").select("id,author_id,body,music_url,music_title,created_at")
       .eq("author_id", profileId).order("created_at", { ascending: false }).limit(50),
     supabase.from("community_follows").select("follower_id").eq("following_id", profileId),
@@ -123,21 +134,74 @@ export type GroupDetail = {
 
 export async function fetchGroup(groupId: string): Promise<GroupDetail | null> {
   const userId = await uid();
-  const [group, membership, posts] = await Promise.all([
-    supabase.from("community_groups").select("id,name,description,created_at,owner_id").eq("id", groupId).maybeSingle(),
-    supabase.from("community_group_members").select("group_id").eq("group_id", groupId).eq("user_id", userId).maybeSingle(),
-    supabase.from("community_group_posts").select("id,group_id,author_id,body,created_at")
-      .eq("group_id", groupId).order("created_at", { ascending: false }).limit(100),
+
+  const [group, membership] = await Promise.all([
+    supabase
+      .from("community_groups")
+      .select("id,name,description,created_at,owner_id")
+      .eq("id", groupId)
+      .maybeSingle(),
+
+    supabase
+      .from("community_group_members")
+      .select("group_id")
+      .eq("group_id", groupId)
+      .eq("user_id", userId)
+      .maybeSingle(),
   ]);
-  for (const result of [group, membership, posts]) fail(result.error);
+
+  fail(group.error);
+  fail(membership.error);
+
   if (!group.data) return null;
-  const authorIds = [...new Set([group.data.owner_id, ...((posts.data || []) as GroupPost[]).map((post) => post.author_id)])];
-  const profiles = await supabase.from("profiles").select("id,display_name,avatar_url,role").in("id", authorIds);
+
+  const joined = Boolean(membership.data);
+
+  if (!joined) {
+    const profiles = await supabase
+      .from("community_profiles")
+      .select("id,display_name,avatar_url,role")
+      .eq("id", group.data.owner_id);
+
+    fail(profiles.error);
+
+    return {
+      group: group.data as Group,
+      joined: false,
+      posts: [],
+      profiles: (profiles.data || []) as CommunityProfile[],
+    };
+  }
+
+  const posts = await supabase
+    .from("community_group_posts")
+    .select("id,group_id,author_id,body,created_at")
+    .eq("group_id", groupId)
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  fail(posts.error);
+
+  const typedPosts = (posts.data || []) as GroupPost[];
+
+  const authorIds = [
+    ...new Set([
+      group.data.owner_id,
+      ...typedPosts.map((post) => post.author_id),
+    ]),
+  ];
+
+  const profiles = await supabase
+    .from("community_profiles")
+    .select("id,display_name,avatar_url,role")
+    .in("id", authorIds);
+
   fail(profiles.error);
+
   return {
     group: group.data as Group,
-    joined: Boolean(membership.data),
-    posts: (posts.data || []) as GroupPost[],
+    joined: true,
+    posts: typedPosts,
     profiles: (profiles.data || []) as CommunityProfile[],
   };
 }
@@ -199,9 +263,7 @@ export async function createGroup(name: string, description: string): Promise<vo
   const { data, error } = await supabase.from("community_groups")
     .insert({ name: cleanName, description: cleanDescription, owner_id: userId }).select("id").single();
   fail(error);
-  const member = await supabase.from("community_group_members")
-    .upsert({ group_id: data!.id, user_id: userId }, { onConflict: "group_id,user_id" });
-  fail(member.error);
+  if (!data) throw new Error("Erro ao criar grupo.");
 }
 
 /** Entra ou sai do grupo. Devolve true se entrou. */
