@@ -1,8 +1,12 @@
 """Endpoints da comunidade; toda leitura/escrita usa o token do usuário e respeita RLS."""
 from typing import Any, Dict, Tuple
+import logging
 import re
+
 import supabase_client
 from supabase_client import SupabaseError
+
+logger = logging.getLogger(__name__)
 
 UUID_RE = re.compile(r"^[0-9a-fA-F-]{36}$")
 
@@ -10,8 +14,25 @@ def _user(token: str):
     user = supabase_client.get_auth_user(token)
     return user["id"]
 
-def _safe_error(error: SupabaseError):
-    return {"success": False, "message": error.message}, error.status
+def _safe_error(error: SupabaseError, fallback: str = "Não foi possível concluir a operação."):
+    logger.error(
+        "Erro na API da comunidade: status=%s mensagem=%s",
+        error.status,
+        error.message,
+    )
+
+    status = error.status or 500
+
+    if status == 401:
+        message = "Sessão expirada. Faça login novamente."
+    elif status == 403:
+        message = "Você não tem permissão para esta ação."
+    elif status == 404:
+        message = "Recurso não encontrado."
+    else:
+        message = fallback
+
+    return {"success": False, "message": message}, status
 
 def dashboard(token: str) -> Tuple[Dict[str, Any], int]:
     try:
@@ -20,23 +41,85 @@ def dashboard(token: str) -> Tuple[Dict[str, Any], int]:
             "select": "id,author_id,body,music_url,music_title,created_at",
             "order": "created_at.desc", "limit": "50"})
         comments = supabase_client.rest_select("community_comments", token, {"select":"id,post_id,author_id,body,created_at","order":"created_at.asc","limit":"300"})
-        likes = supabase_client.rest_select("community_likes", token, {"select":"post_id,user_id","user_id":f"eq.{uid}"})
+        likes = supabase_client.rest_select(
+            "community_likes",
+            token,
+            {
+                "select": "post_id,user_id",
+                "limit": "5000",
+            },
+        )
         follows = supabase_client.rest_select("community_follows", token, {"select":"following_id","follower_id":f"eq.{uid}"})
         followers = supabase_client.rest_select("community_follows", token, {"select":"follower_id","following_id":f"eq.{uid}"})
-        profiles = supabase_client.rest_select("profiles", token, {"select":"id,display_name,avatar_url,role","order":"display_name.asc","limit":"100"})
+        profiles = supabase_client.rest_select(
+            "community_profiles",
+            token,
+            {
+                "select": "id,display_name,avatar_url,role",
+                "order": "display_name.asc",
+                "limit": "100",
+            },
+        )
         groups = supabase_client.rest_select("community_groups", token, {"select":"id,name,description,created_at,owner_id","order":"created_at.desc","limit":"50"})
         memberships = supabase_client.rest_select("community_group_members", token, {"select":"group_id","user_id":f"eq.{uid}"})
-        group_posts = supabase_client.rest_select("community_group_posts", token, {"select":"id,group_id,author_id,body,created_at","order":"created_at.desc","limit":"100"})
+        group_posts = supabase_client.rest_select(
+            "community_group_posts",
+            token,
+            {
+                "select": "id,group_id,author_id,body,created_at",
+                "order": "created_at.desc",
+                "limit": "100",
+            },
+        )
         announcements = supabase_client.rest_select("community_announcements", token, {"select":"id,title,body,created_at","order":"created_at.desc","limit":"20"})
-        return {"success":True,"user_id":uid,"posts":posts,"comments":comments,"liked_post_ids":[r["post_id"] for r in likes],"following_ids":[r["following_id"] for r in follows],"follower_ids":[r["follower_id"] for r in followers],"profiles":profiles,"groups":groups,"joined_group_ids":[r["group_id"] for r in memberships],"group_posts":group_posts,"announcements":announcements},200
-    except SupabaseError as e: return _safe_error(e)
+        like_counts: Dict[str, int] = {}
+
+        for row in likes:
+            post_id = row.get("post_id")
+            if post_id:
+                like_counts[post_id] = like_counts.get(post_id, 0) + 1
+
+        liked_post_ids = [
+            row["post_id"]
+            for row in likes
+            if row.get("user_id") == uid and row.get("post_id")
+        ]
+        return {
+            "success": True,
+            "user_id": uid,
+            "posts": posts,
+            "comments": comments,
+            "liked_post_ids": liked_post_ids,
+            "like_counts": like_counts,
+            "following_ids": [
+                row["following_id"]
+                for row in follows
+                if row.get("following_id")
+            ],
+            "follower_ids": [
+                row["follower_id"]
+                for row in followers
+                if row.get("follower_id")
+            ],
+            "profiles": profiles,
+            "groups": groups,
+            "joined_group_ids": [
+                row["group_id"]
+                for row in memberships
+                if row.get("group_id")
+            ],
+            "group_posts": group_posts,
+            "announcements": announcements,
+        }, 200
+    except SupabaseError as e:
+        return _safe_error(e)
 
 def user_profile(token: str, profile_id: str) -> Tuple[Dict[str, Any], int]:
     if not UUID_RE.match(profile_id):
         return {"success": False, "message": "Perfil inválido."}, 400
     try:
         uid = _user(token)
-        profiles = supabase_client.rest_select("profiles", token, {
+        profiles = supabase_client.rest_select("community_profiles", token, {
             "select": "id,display_name,avatar_url,role",
             "id": f"eq.{profile_id}",
             "limit": "1",
@@ -125,7 +208,6 @@ def create_group(token: str, data: Dict[str, Any]):
     try:
         uid=_user(token); rows=supabase_client.rest_upsert("community_groups",token,[{"name":name,"description":desc,"owner_id":uid}])
         group=rows[0] if rows else None
-        if group: supabase_client.rest_upsert("community_group_members",token,[{"group_id":group["id"],"user_id":uid}],"group_id,user_id")
         return {"success":True,"group":group},201
     except SupabaseError as e:return _safe_error(e)
 
@@ -151,7 +233,15 @@ def create_announcement(token: str, data: Dict[str, Any]):
     title=str(data.get("title"," ")).strip(); body=str(data.get("body"," ")).strip()
     if not title or len(title)>140 or not body or len(body)>3000:return {"success":False,"message":"Informe título e texto válidos."},400
     try:
-        uid=_user(token); profile=supabase_client.rest_select("profiles",token,{"select":"role","id":f"eq.{uid}"})
+        uid=_user(token); profile = supabase_client.rest_select(
+            "community_profiles",
+            token,
+            {
+                "select": "role",
+                "id": f"eq.{uid}",
+                "limit": "1",
+            },
+        )
         if not profile or profile[0].get("role") not in {"admin","teacher"}:return {"success":False,"message":"Apenas professores e administradores podem publicar informes."},403
         rows=supabase_client.rest_upsert("community_announcements",token,[{"author_id":uid,"title":title,"body":body}])
         return {"success":True,"announcement":rows[0] if rows else None},201

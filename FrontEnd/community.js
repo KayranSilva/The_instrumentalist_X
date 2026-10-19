@@ -3,7 +3,20 @@
   const user = AppSession.requireUser(); if (!user) return;
   const $ = (id) => document.getElementById(id);
   const esc = AppSession.escapeHtml;
-  let state = { user_id: user.id, posts: [], comments: [], liked_post_ids: [], following_ids: [], follower_ids: [], profiles: [], groups: [], joined_group_ids: [], group_posts: [], announcements: [] };
+  let state = {
+  user_id: user.id,
+  posts: [],
+  comments: [],
+  liked_post_ids: [],
+  like_counts: {},
+  following_ids: [],
+  follower_ids: [],
+  profiles: [],
+  groups: [],
+  joined_group_ids: [],
+  group_posts: [],
+  announcements: [],
+};
   let activeGroup = null;
   const initials = (name) => esc((name || "Músico").trim().split(/\s+/).slice(0, 2).map(x => x[0] || "").join("").toUpperCase());
   const nameOf = (id) => state.profiles.find(p => p.id === id)?.display_name || (id === state.user_id ? user.name : "Membro da comunidade");
@@ -17,10 +30,106 @@
   function render() { renderFeed(); renderPeople(); renderGroups(); renderAnnouncements(); $("announcementForm").hidden = !["teacher", "admin"].includes(user.role); }
   function renderFeed() {
     const host = $("feed");
-    if (!state.posts.length) { host.innerHTML = '<div class="empty">Ainda não há publicações. Seja a primeira pessoa a compartilhar algo! ♫</div>'; return; }
-    host.innerHTML = state.posts.map(post => {
-      const p = profileOf(post.author_id), comments = state.comments.filter(c => c.post_id === post.id), liked = state.liked_post_ids.includes(post.id);
-      return `<article class="post-card"><div class="post-head">${avatar(post.author_id)}<div class="person-meta"><strong><a class="profile-link" href="${profileLink(post.author_id)}">${esc(nameOf(post.author_id))}</a></strong><small>${date(post.created_at)}</small></div>${p.role === "teacher" || p.role === "admin" ? '<span class="role-pill">Professor</span>' : ''}</div>${post.body ? `<p class="post-body">${esc(post.body)}</p>` : ''}${post.music_url ? `<a class="music-link" href="${esc(post.music_url)}" target="_blank" rel="noopener noreferrer"><span class="play">▶</span><span><strong>${esc(post.music_title || "Ouvir música compartilhada")}</strong><small>Abrir link musical ↗</small></span></a>` : ''}<div class="post-actions"><button class="action-btn ${liked ? 'liked' : ''}" data-like="${post.id}">${liked ? '♥ Curtido' : '♡ Curtir'}</button><span class="action-btn">▢ ${comments.length} comentário(s)</span></div><div class="comments">${comments.map(c => `<p class="comment"><strong><a class="profile-link" href="${profileLink(c.author_id)}">${esc(nameOf(c.author_id))}</a>:</strong> ${esc(c.body)}</p>`).join('')}<form class="comment-form" data-comment="${post.id}"><input name="body" maxlength="1200" required placeholder="Escreva um comentário…" aria-label="Comentário"><button class="primary" type="submit">Enviar</button></form></div></article>`;
+
+    if (!state.posts.length) {
+      host.innerHTML =
+        '<div class="empty">Ainda não há publicações. Seja a primeira pessoa a compartilhar algo! ♫</div>';
+      return;
+    }
+
+    host.innerHTML = state.posts.map((post) => {
+      const profile = profileOf(post.author_id);
+      const comments = state.comments.filter(
+        (comment) => comment.post_id === post.id,
+      );
+      const liked = state.liked_post_ids.includes(post.id);
+      const likeCount = state.like_counts?.[post.id] ?? 0;
+
+      return `
+        <article class="post-card">
+          <div class="post-head">
+            ${avatar(post.author_id)}
+            <div class="person-meta">
+              <strong>
+                <a class="profile-link" href="${profileLink(post.author_id)}">
+                  ${esc(nameOf(post.author_id))}
+                </a>
+              </strong>
+              <small>${date(post.created_at)}</small>
+            </div>
+            ${
+              profile.role === "teacher" || profile.role === "admin"
+                ? '<span class="role-pill">Professor</span>'
+                : ""
+            }
+          </div>
+
+          ${
+            post.body
+              ? `<p class="post-body">${esc(post.body)}</p>`
+              : ""
+          }
+
+          ${
+            post.music_url
+              ? `
+                <a class="music-link"
+                  href="${esc(post.music_url)}"
+                  target="_blank"
+                  rel="noopener noreferrer">
+                  <span class="play">▶</span>
+                  <span>
+                    <strong>${esc(post.music_title || "Ouvir música compartilhada")}</strong>
+                    <small>Abrir link musical ↗</small>
+                  </span>
+                </a>
+              `
+              : ""
+          }
+
+          <div class="post-actions">
+            <button
+              class="action-btn ${liked ? "liked" : ""}"
+              data-like="${esc(post.id)}"
+              type="button">
+              ${liked ? "♥ Curtido" : "♡ Curtir"} · ${likeCount}
+            </button>
+
+            <span class="action-btn">
+              ▢ ${comments.length} comentário(s)
+            </span>
+          </div>
+
+          <div class="comments">
+            ${comments
+              .map(
+                (comment) => `
+                  <p class="comment">
+                    <strong>
+                      <a
+                        class="profile-link"
+                        href="${profileLink(comment.author_id)}">
+                        ${esc(nameOf(comment.author_id))}
+                      </a>:
+                    </strong>
+                    ${esc(comment.body)}
+                  </p>
+                `,
+              )
+              .join("")}
+
+            <form class="comment-form" data-comment="${esc(post.id)}">
+              <input
+                name="body"
+                maxlength="1200"
+                required
+                placeholder="Escreva um comentário…"
+                aria-label="Comentário">
+              <button class="primary" type="submit">Enviar</button>
+            </form>
+          </div>
+        </article>
+      `;
     }).join("");
   }
   function renderPeople() {
