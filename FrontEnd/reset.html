@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Instrumentalist — Nova senha</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="layout">
+  <section class="stage">
+    <div class="brand"><div class="brand-mark">I</div><span class="brand-name">The Instrumentalist</span></div>
+    <div class="stage-copy">
+      <span class="kicker">Recuperação de acesso</span>
+      <h1>Crie uma nova senha e volte a praticar.</h1>
+      <p>Escolha uma senha que você não usa em outros sites.</p>
+    </div>
+    <div class="stage-figure" aria-hidden="true"><img src="music.png" alt=""></div>
+  </section>
+  <section class="panel">
+    <div class="form-wrap">
+      <div class="form-head"><h2>Nova senha</h2><p>Digite e confirme sua nova senha.</p></div>
+      <div class="notice" id="pageNotice" role="status" hidden></div>
+      <form id="resetForm" novalidate>
+        <div class="field"><label for="password">Nova senha</label><div class="input-shell"><input type="password" id="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password" required minlength="6" maxlength="72"></div><span class="field-error" id="passwordError"></span></div>
+        <div class="field"><label for="confirmPassword">Confirmar nova senha</label><div class="input-shell"><input type="password" id="confirmPassword" placeholder="Repita a senha" autocomplete="new-password" required minlength="6" maxlength="72"></div><span class="field-error" id="confirmPasswordError"></span></div>
+        <button type="submit" class="btn-primary" id="resetSubmit">Salvar nova senha</button>
+      </form>
+      <p class="signup-hint"><a class="link-btn" href="login.html">Voltar para o login</a></p>
+    </div>
+  </section>
+</div>
+<script src="session.js"></script>
+<script src="reset.js"></script>
+</body>
+</html>
