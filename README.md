@@ -94,3 +94,29 @@ A página `FrontEnd/community.html` integra a Comunidade ao site existente. Ela 
 - A autorização das operações é aplicada no backend e no Row Level Security do Supabase. Professores/administradores são os únicos autorizados a publicar informes oficiais.
 - O compartilhamento de mídia usa links externos `http(s)`; o site não baixa nem hospeda automaticamente esses arquivos.
 - A amizade mútua é representada por seguimento recíproco: quando A segue B e B segue A, a interface identifica ambos como amigos. É possível seguir e deixar de seguir pessoas.
+
+## App mobile (Expo)
+
+A pasta `mobile/` tem o app Android/iOS (Expo SDK 57 (expo 57.0.9) + Expo Router, TypeScript), que roda no **Expo Go**. Ele usa o **mesmo projeto Supabase** do site, direto pelo `@supabase/supabase-js` (sessão salva no AsyncStorage e renovada automaticamente) — não precisa do servidor Python ligado. O site continua igual.
+
+O app tem as mesmas funções do site, adaptadas ao celular, em quatro abas:
+
+- **Início:** saudação, "continue de onde parou", sequência, XP do mês e nível, conteúdos do instrumento principal, "Explore por instrumento" e a jornada completa (nível, semana, conquistas e ranking).
+- **Aulas:** conteúdos por instrumento, player (vídeo/áudio enviados, YouTube e Vimeo, com "Marcar como concluída") e visualizador de PDF (nativo no iOS; PDF.js no Android, com opção de abrir fora do app).
+- **Comunidade:** feed (publicar com link musical, curtir, comentar), grupos (criar, entrar/sair, conversas), pessoas (seguir) e informes oficiais (professores/admins publicam). Os nomes abrem o perfil público.
+- **Conta (configurações):** meu perfil, trocar instrumento principal, painel administrativo (professores/admins), gerenciar usuários (admins) e sair.
+
+O painel no app publica, edita e exclui aulas, músicas e partituras, com envio de arquivo (barra de progresso, até 50 MB) ou link, rascunhos, busca e filtros. A gestão de usuários muda papéis. No login há "Esqueci minha senha": o link do e-mail abre a tela de nova senha do site.
+
+```bash
+cd mobile
+cp .env.example .env   # EXPO_PUBLIC_SUPABASE_URL e EXPO_PUBLIC_SUPABASE_ANON_KEY (mesmos valores do .env da raiz)
+npm install
+npx expo start         # escaneie o QR code com o Expo Go (Android) ou a Câmera (iOS)
+npm run typecheck
+```
+
+- Celular e computador precisam estar na mesma rede (ou use `npx expo start --tunnel`). O Expo Go instalado tem que suportar o SDK 57. `expo` e `react-native` estão fixados (57.0.9 e 0.86.2) e excluídos do `npx expo install --fix` em `mobile/package.json`.
+- Instale pacotes com `npx expo install <pacote>` para pegar versões compatíveis com o SDK. Bibliotecas com código nativo fora do Expo Go exigiriam um *development build*.
+- Cadastro: o app envia `name` e `instrument` nos metadados, como o site, e o trigger cria o perfil. Se o Supabase exigir confirmação de e-mail, o link abre o site; depois é só entrar no app.
+- As regras são as mesmas do site: o app fala direto com o Supabase e o RLS decide o que cada papel pode fazer.
