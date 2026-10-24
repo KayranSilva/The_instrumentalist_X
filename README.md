@@ -53,11 +53,11 @@ No login, quem tem `profiles.role` igual a `admin` ou `teacher` é redirecionado
 
 ## Home personalizada
 
-A home busca os conteúdos publicados (aulas, músicas e partituras) agrupados por instrumento, sempre com o instrumento principal em primeiro lugar. Clicar num conteúdo abre o player (vídeo/áudio enviado, YouTube, Vimeo ou PDF). "Marcar como concluída" chama a função `complete_content()` do banco: +20 XP na primeira vez, registra o dia de prática (sequência), sobe de nível a cada 100 XP e desbloqueia conquistas. O ranking mostra só primeiro nome + inicial. Admins e professores veem um link para o painel.
+A home busca os conteúdos publicados (aulas, músicas e partituras) agrupados por instrumento, sempre com o instrumento principal em primeiro lugar. Clicar num conteúdo abre o player (vídeo/áudio enviado, YouTube, Vimeo ou PDF). "Marcar como concluída" chama a função `complete_content()` do banco: +20 XP na primeira vez, registra o dia de prática (sequência), sobe de nível a cada 100 XP e desbloqueia conquistas. O ranking mostra só primeiro nome + inicial. Admins e professores podem usar a área do aluno e veem um link para o painel.
 
 ## Administração
 
-Acesse pelo login com uma conta `admin`/`teacher`. O painel publica, edita (inclusive como rascunho) e exclui aulas, músicas e partituras; arquivos vão para o bucket `lesson-assets` e são apagados junto com o conteúdo. O professor de cada conteúdo é escolhido numa lista de professores/admins cadastrados. Administradores também têm a aba **Usuários**, para promover alguém a professor ou admin sem SQL (ninguém pode alterar o próprio papel). Todas essas regras são garantidas pelo banco (RLS + funções), não só pela tela: alunos não conseguem alterar papel, XP ou nível nem com chamadas diretas à API.
+Acesse pelo login com uma conta `admin`/`teacher`. O painel publica, edita (inclusive como rascunho) e exclui aulas, músicas e partituras; arquivos vão para o bucket `lesson-assets` e são apagados junto com o conteúdo. O professor de cada conteúdo é escolhido numa lista de professores/admins cadastrados. Administradores também têm a aba **Usuários**, para promover alguém a professor ou admin sem SQL (ninguém pode alterar o próprio papel). Administradores e professores continuam com acesso à área do aluno, incluindo seleção de instrumento principal e registro de progresso. Todas essas regras são garantidas pelo banco (RLS + funções), não só pela tela: alunos não conseguem alterar papel, XP ou nível nem com chamadas diretas à API.
 
 ## Comunidade
 
