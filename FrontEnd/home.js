@@ -472,7 +472,7 @@
                 AppSession.saveUser(Object.assign(Object.assign({}, user), { email: data.user.email, name: data.user.name, role: data.user.role }));
             if (firstLoad) {
                 firstLoad = false;
-                if (data.user.role === "student" && !data.user.primary_instrument)
+                if (!data.user.primary_instrument)
                     openInstrumentDialog(true);
             }
         }
