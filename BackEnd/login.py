@@ -16,6 +16,7 @@ from content import MAX_UPLOAD_MB, create_content, delete_content, is_uuid, list
 from exercise import delete_exercise, get_exercise, save_exercise
 from homepage import complete_content, get_homepage_data
 import community as community_api
+import plans as plans_api
 from supabase_client import SupabaseError, bearer_token_from_header, translate_message
 
 SUPABASE_URL = supabase_client.SUPABASE_URL
@@ -573,6 +574,12 @@ class LoginRequestHandler(BaseHTTPRequestHandler):
             "/admin/content": list_content,
             "/admin/teachers": list_teachers,
             "/admin/users": admin_list_users,
+            "/admin/plans": plans_api.admin_list_plans,
+            "/admin/subscriptions": plans_api.admin_list_subscriptions,
+            "/admin/payments": plans_api.admin_list_payments,
+            "/plans": plans_api.list_active_plans,
+            "/my/subscriptions": plans_api.my_subscriptions,
+            "/my/payments": plans_api.my_payments,
         }
         if route in authenticated_routes:
             token = self._require_token()
@@ -650,6 +657,12 @@ class LoginRequestHandler(BaseHTTPRequestHandler):
                 status = 200 if response.get("success") else int(response.pop("status", 500) or 500)
         elif route == "/admin/content":
             response, status = create_content(token, payload, upload)
+        elif route == "/admin/plans":
+            response, status = plans_api.create_plan(token, payload)
+        elif route == "/plans/purchase":
+            response, status = plans_api.purchase_plan(token, payload)
+        elif route == "/my/subscriptions/cancel":
+            response, status = plans_api.cancel_my_subscription(token, payload)
         elif route.startswith("/admin/users/") and route.endswith("/role"):
             user_id = route[len("/admin/users/"):-len("/role")]
             response, status = admin_set_role(token, user_id, str(payload.get("role", "")))
@@ -675,6 +688,19 @@ class LoginRequestHandler(BaseHTTPRequestHandler):
 
     def do_PATCH(self):
         route = self._route()
+
+        plans_prefix = "/admin/plans/"
+        if route.startswith(plans_prefix):
+            token = self._require_token()
+            if not token:
+                return
+            parsed = self._parse_body()
+            if parsed is None:
+                return
+            payload, _ = parsed
+            self._send_json(*plans_api.update_plan(token, route[len(plans_prefix):], payload))
+            return
+
         prefix = "/admin/content/"
 
         if not route.startswith(prefix):

@@ -145,6 +145,13 @@ def rest_upsert(
     return data if isinstance(data, list) else []
 
 
+def rest_insert(table: str, token: Optional[str], row: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """INSERT via PostgREST; devolve a linha criada."""
+    url = f"{SUPABASE_URL}/rest/v1/{table}"
+    data, _ = _request("POST", url, token=token, body=row, extra_headers={"Prefer": "return=representation"})
+    return data if isinstance(data, list) else []
+
+
 def rest_update(table: str, token: Optional[str], params: Dict[str, str], patch: Dict[str, Any]) -> List[Dict[str, Any]]:
     """PATCH via PostgREST; devolve as linhas alteradas (lista vazia = nada casou)."""
     url = f"{SUPABASE_URL}/rest/v1/{table}?{urlencode(params)}"

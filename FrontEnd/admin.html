@@ -17,6 +17,7 @@
     <nav>
       <a class="nav-item" href="#conteudos" data-view="content"><span class="nav-icon" aria-hidden="true">▦</span> Conteúdos</a>
       <a class="nav-item" href="#usuarios" data-view="users" id="navUsers" hidden><span class="nav-icon" aria-hidden="true">☺</span> Usuários</a>
+      <a class="nav-item" href="#planos" data-view="plans" id="navPlans" hidden><span class="nav-icon" aria-hidden="true">◆</span> Planos</a>
       <a class="nav-item" href="home.html"><span class="nav-icon" aria-hidden="true">⌂</span> Área do aluno</a>
     </nav>
     <div class="sidebar-footer">
@@ -149,6 +150,65 @@
       </section>
     </section>
 
+    <!-- ================= Planos ================= -->
+    <section id="plansView" hidden>
+      <header class="page-header">
+        <div><span class="eyebrow">Administração</span><h1>Planos</h1><p>Cadastre os planos e acompanhe as assinaturas e os pagamentos dos alunos.</p></div>
+        <div class="admin-access"><button id="refreshPlansBtn" class="icon-button" type="button" aria-label="Atualizar planos" title="Atualizar planos">↻</button></div>
+      </header>
+
+      <section class="stats-grid" aria-label="Resumo de planos">
+        <article class="stat-card"><span class="stat-label">Planos ativos</span><strong id="planActiveCount">–</strong><span class="stat-note" id="planInactiveNote">visíveis para os alunos</span></article>
+        <article class="stat-card stat-card--peach"><span class="stat-label">Assinaturas ativas</span><strong id="subActiveCount">–</strong><span class="stat-note" id="subTotalNote">contratações</span></article>
+        <article class="stat-card stat-card--mint"><span class="stat-label">Total aprovado</span><strong id="payApprovedTotal">–</strong><span class="stat-note" id="payApprovedNote">pagamentos aprovados</span></article>
+      </section>
+
+      <div class="content-grid">
+        <section class="panel publish-panel" id="planFormPanel">
+          <div class="panel-heading">
+            <div><span class="eyebrow" id="planFormEyebrow">Novo plano</span><h2 id="planFormTitle">Cadastrar plano</h2></div>
+            <button class="ghost-button" id="planCancelEdit" type="button" hidden>Cancelar edição</button>
+          </div>
+          <form id="planForm" novalidate>
+            <label class="field"><span>Nome <i>*</i></span><input id="planName" maxlength="120" placeholder="Ex.: Plano Mensal"></label>
+            <label class="field"><span>Descrição</span><textarea id="planDescription" rows="2" maxlength="1000" placeholder="Para quem é este plano?"></textarea></label>
+            <div class="field-row">
+              <label class="field"><span>Preço (R$) <i>*</i></span><input id="planPrice" type="number" min="0" step="0.01" inputmode="decimal" placeholder="29,90"></label>
+              <label class="field"><span>Período <i>*</i></span>
+                <select id="planPeriod"><option value="monthly">Mensal</option><option value="quarterly">Trimestral</option><option value="semiannual">Semestral</option><option value="annual">Anual</option></select>
+              </label>
+            </div>
+            <label class="field"><span>Duração (dias) <i>*</i></span><input id="planDuration" type="number" min="1" max="3650" step="1" inputmode="numeric"><small class="hint">Preenchida pelo período, mas você pode ajustar.</small></label>
+            <label class="field"><span>Benefícios</span><textarea id="planFeatures" rows="4" placeholder="Um benefício por linha"></textarea><small class="hint">Até 12 benefícios, um por linha.</small></label>
+            <label class="check-field"><input type="checkbox" id="planActive" checked> <span>Plano ativo <small>(aparece para os alunos)</small></span></label>
+            <label class="check-field"><input type="checkbox" id="planFeatured"> <span>Destacar plano <small>(aparece primeiro, com selo)</small></span></label>
+            <button class="submit-button" type="submit" id="planSubmit"><span id="planSubmitLabel">Cadastrar plano</span><b aria-hidden="true">↗</b></button>
+            <p class="form-feedback" id="planFeedback" role="status"></p>
+          </form>
+        </section>
+
+        <section class="panel library-panel">
+          <div class="panel-heading library-heading"><div><span class="eyebrow">Catálogo</span><h2>Planos</h2></div><span class="count-pill" id="planCount">0 planos</span></div>
+          <p class="hint-line">Editar um plano não muda as assinaturas já feitas: elas guardam o preço e a duração do dia da contratação. Planos não são excluídos, só desativados.</p>
+          <div id="planList" class="content-list"><div class="empty-state"><span>$</span><p>Carregando planos…</p></div></div>
+        </section>
+      </div>
+
+      <section class="panel plans-history">
+        <div class="panel-heading library-heading"><div><span class="eyebrow">Acompanhamento</span><h2>Assinaturas e pagamentos</h2></div><span class="count-pill" id="planHistoryCount">0</span></div>
+        <div class="plan-tabs" role="tablist">
+          <button class="plan-tab active" type="button" role="tab" data-tab="subscriptions" aria-selected="true">Assinaturas</button>
+          <button class="plan-tab" type="button" role="tab" data-tab="payments" aria-selected="false">Pagamentos</button>
+        </div>
+        <div class="table-wrap">
+          <table class="users-table">
+            <thead id="planHistoryHead"></thead>
+            <tbody id="planHistoryBody"><tr><td colspan="6" class="table-empty">Carregando…</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
   </main>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
@@ -156,6 +216,7 @@
 <script src="pitch.js"></script>
 <script src="exercise-score.js"></script>
 <script src="metronome.js"></script>
+<script src="admin-plans.js"></script>
 <script src="admin.js"></script>
 </body>
 </html>
