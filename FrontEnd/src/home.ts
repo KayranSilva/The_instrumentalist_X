@@ -13,6 +13,7 @@
     media_kind: string;
     media_url: string;
     completed: boolean;
+    has_exercise?: boolean;
   };
   type LessonGroup = { instrument_slug: string; instrument_name: string; is_primary: boolean; lessons: LessonItem[] };
   type InstrumentItem = { name: string; slug: string; is_primary: boolean; content_count: number };
@@ -421,6 +422,11 @@
       const usable = isHttpUrl(lesson.media_url);
       external.hidden = !usable;
       external.href = usable ? lesson.media_url : "#";
+    }
+    const practice = $<HTMLAnchorElement>("practiceLink");
+    if (practice) {
+      practice.hidden = !lesson.has_exercise;
+      practice.href = `practice.html?id=${encodeURIComponent(lesson.id)}`;
     }
     updateCompleteButton(lesson);
     openOverlay("playerOverlay");

@@ -13,6 +13,7 @@ from urllib.request import Request, urlopen
 
 import supabase_client
 from content import MAX_UPLOAD_MB, create_content, delete_content, is_uuid, list_content, list_teachers, update_content
+from exercise import delete_exercise, get_exercise, save_exercise
 from homepage import complete_content, get_homepage_data
 import community as community_api
 from supabase_client import SupabaseError, bearer_token_from_header, translate_message
@@ -346,7 +347,7 @@ class LoginRequestHandler(BaseHTTPRequestHandler):
     }
     # Folga para os campos de texto do formulário além do arquivo em si.
     MAX_BODY_SIZE = (MAX_UPLOAD_MB + 1) * 1024 * 1024
-    ALLOWED_METHODS = "GET, POST, PATCH, DELETE, OPTIONS"
+    ALLOWED_METHODS = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
 
     # ---------- utilitários ----------
 
@@ -560,6 +561,13 @@ class LoginRequestHandler(BaseHTTPRequestHandler):
             self._send_json(*community_api.user_profile(token, profile_id))
             return
 
+        if route.startswith("/content/") and route.endswith("/exercise"):
+            token = self._require_token()
+            if not token:
+                return
+            self._send_json(*get_exercise(token, route[len("/content/"):-len("/exercise")]))
+            return
+
         authenticated_routes = {
             "/me": current_user,
             "/admin/content": list_content,
@@ -650,6 +658,21 @@ class LoginRequestHandler(BaseHTTPRequestHandler):
 
         self._send_json(response, status)
 
+    def do_PUT(self):
+        route = self._route()
+        prefix, suffix = "/admin/content/", "/exercise"
+        if not (route.startswith(prefix) and route.endswith(suffix)):
+            self._send_json({"success": False, "message": "Rota não encontrada."}, 404)
+            return
+        token = self._require_token()
+        if not token:
+            return
+        parsed = self._parse_body()
+        if parsed is None:
+            return
+        payload, upload = parsed
+        self._send_json(*save_exercise(token, route[len(prefix):-len(suffix)], payload, upload))
+
     def do_PATCH(self):
         route = self._route()
         prefix = "/admin/content/"
@@ -691,6 +714,9 @@ class LoginRequestHandler(BaseHTTPRequestHandler):
             return
         token = self._require_token()
         if not token:
+            return
+        if route.endswith("/exercise"):
+            self._send_json(*delete_exercise(token, route[len(prefix):-len("/exercise")]))
             return
         self._send_json(*delete_content(token, route[len(prefix):]))
 

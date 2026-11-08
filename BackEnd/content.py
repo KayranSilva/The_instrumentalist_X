@@ -144,7 +144,14 @@ def list_content(token: str) -> Tuple[Dict[str, Any], int]:
         )
     except SupabaseError as error:
         return _friendly_error(error, "Não foi possível carregar o catálogo.")
-    return {"success": True, "content": [_serialize(row) for row in rows]}, 200
+    try:
+        exercises = {row["content_item_id"] for row in supabase_client.rest_select(
+            "lesson_exercises", token, {"select": "content_item_id"}
+        )}
+    except SupabaseError:
+        exercises = set()  # migration de exercícios ainda não aplicada
+    content = [{**_serialize(row), "has_exercise": row["id"] in exercises} for row in rows]
+    return {"success": True, "content": content}, 200
 
 
 def list_teachers(token: str) -> Tuple[Dict[str, Any], int]:
@@ -225,9 +232,26 @@ def _asset_paths(token: str, content_item_id: str) -> List[str]:
     return [row["storage_path"] for row in rows if row.get("storage_path")]
 
 
+def _exercise_reference_path(token: str, content_item_id: str) -> Optional[str]:
+    """Arquivo analisado para o gabarito do exercício (lesson_exercises), se houver."""
+    try:
+        rows = supabase_client.rest_select(
+            "lesson_exercises", token,
+            {"select": "content_assets(storage_path)", "content_item_id": f"eq.{content_item_id}"},
+        )
+    except SupabaseError:
+        return None
+    return ((rows[0].get("content_assets") or {}).get("storage_path") if rows else None) or None
+
+
 def _remove_assets(token: str, content_item_id: str, keep: Optional[str] = None) -> None:
-    """Apaga arquivos antigos do Storage (best effort: não falha a operação)."""
-    paths = [path for path in _asset_paths(token, content_item_id) if path != keep]
+    """Apaga arquivos antigos do Storage (best effort: não falha a operação).
+
+    O áudio de referência do exercício é preservado: quem decide trocá-lo é
+    o PUT do gabarito (exercise.save_exercise).
+    """
+    reference = _exercise_reference_path(token, content_item_id)
+    paths = [path for path in _asset_paths(token, content_item_id) if path not in {keep, reference}]
     if not paths:
         return
     try:

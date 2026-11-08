@@ -2,6 +2,7 @@ from typing import Any, Dict
 
 import supabase_client
 from content import TYPE_DB_TO_UI, describe_media, level_label, seconds_to_duration
+from exercise import exercise_ids
 from supabase_client import SupabaseError
 
 XP_PER_LEVEL = 100
@@ -58,6 +59,8 @@ def get_homepage_data(token: str) -> Dict[str, Any]:
         # ainda não tiver sido aplicada.
         journey = _empty_journey()
 
+    with_exercise = exercise_ids(token)
+
     display_name = profile.get("display_name") or (email.split("@")[0].capitalize() if email else "Aluno")
     primary_entry = next((pi for pi in profile_instruments if pi.get("is_primary")), None)
     primary_instrument_id = primary_entry.get("instrument_id") if primary_entry else None
@@ -86,6 +89,7 @@ def get_homepage_data(token: str) -> Dict[str, Any]:
             "media_kind": media["kind"],
             "media_url": media["embed_url"],
             "completed": item["id"] in completed_ids,
+            "has_exercise": item["id"] in with_exercise,
         })
 
     lesson_groups = sorted(

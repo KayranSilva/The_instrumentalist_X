@@ -395,6 +395,11 @@
             external.hidden = !usable;
             external.href = usable ? lesson.media_url : "#";
         }
+        const practice = $("practiceLink");
+        if (practice) {
+            practice.hidden = !lesson.has_exercise;
+            practice.href = `practice.html?id=${encodeURIComponent(lesson.id)}`;
+        }
         updateCompleteButton(lesson);
         openOverlay("playerOverlay");
     }

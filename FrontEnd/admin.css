@@ -57,3 +57,26 @@
   .users-table td::before{content:attr(data-label);color:var(--muted);font-size:11px;font-weight:700}
   .users-table td[data-label="Usuário"]::before{display:none}
 }
+
+/* ===== Exercício com reconhecimento de áudio ===== */
+.exercise-box{margin:2px 0 16px;padding:14px 14px 4px;border:1px solid var(--line);border-radius:8px;background:#fcfbff}
+.exercise-box .check-field{margin:0 0 12px}
+.exercise-box > div > .hint{margin:0 0 12px;color:var(--muted);font-size:12px}
+.exercise-actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.ghost-button:disabled{opacity:.55;cursor:default}
+.exercise-preview{margin-bottom:12px}
+.exercise-preview video,.exercise-preview audio{display:block;width:100%;max-height:200px;border-radius:6px;background:#120c22}
+.exercise-preview audio{background:transparent}
+.note-chips{display:flex;flex-wrap:wrap;align-items:center;gap:3px;margin-bottom:12px;min-height:20px}
+.note-chip{display:inline-flex;align-items:stretch;border:1px solid var(--line);border-radius:6px;background:var(--white);overflow:hidden}
+.note-chip.is-selected{border-color:#7b4fe0;box-shadow:0 0 0 2px #f0ebfc}
+.note-chip-main{border:0;background:transparent;padding:4px 7px;color:var(--ink);font-size:12px;font-weight:700;line-height:1.15;text-align:center}
+.note-chip-main small{display:block;color:var(--muted);font-size:9.5px;font-weight:500}
+.note-chip-remove{border:0;border-left:1px solid var(--line);background:#faf8ff;color:#9b91ad;padding:0 6px;font-size:13px}
+.note-chip-remove:hover{color:#bd5b46}
+.note-insert{width:18px;height:18px;padding:0;border:1px dashed #cfc5ea;border-radius:50%;background:transparent;color:#9b91ad;font-size:12px;line-height:15px}
+.note-insert:hover{border-color:#7b4fe0;color:var(--green)}
+.note-insert--end{width:auto;height:auto;padding:4px 9px;border-radius:6px;font-weight:700}
+.note-editor{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:-4px 0 12px;padding:9px 10px;border-radius:6px;background:#f4f1fb;font-size:12px}
+.note-editor select{padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--white);font-size:12px}
+.exercise-pill{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:20px;background:#e8defb;color:var(--green);font-size:10px;font-weight:700;vertical-align:middle}
