@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Instrumentalist — Praticar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="practice.css">
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="home.html"><span class="brand-mark">I</span><span>The Instrumentalist</span></a>
+  <a class="back-link" href="home.html">← Voltar para as aulas</a>
+</header>
+
+<main class="practice">
+  <section class="card" id="loadingView">
+    <p class="muted">Carregando exercício…</p>
+  </section>
+
+  <section class="card" id="unavailableView" hidden>
+    <span class="kicker">Praticar com microfone</span>
+    <h1>Exercício indisponível</h1>
+    <p class="muted" id="unavailableText">Esta aula não tem exercício com reconhecimento de áudio.</p>
+    <a class="btn-primary" href="home.html">Voltar para a home</a>
+  </section>
+
+  <section class="card" id="exerciseView" hidden>
+    <span class="kicker" id="exerciseKicker">Praticar com microfone</span>
+    <h1 id="exerciseTitle"></h1>
+    <p class="muted" id="exerciseMeta"></p>
+
+    <!-- ===== Antes ===== -->
+    <div id="setupView">
+      <div class="step">
+        <h2>1. Escolha a dificuldade</h2>
+        <div class="segmented" role="radiogroup" aria-label="Dificuldade" id="difficulty"></div>
+      </div>
+
+      <div class="step">
+        <h2>2. Conheça o exercício</h2>
+        <div class="chips" id="setupChips" aria-label="Notas do exercício"></div>
+        <div class="row">
+          <button class="btn-secondary" type="button" id="listenButton">▶ Ouvir exemplo</button>
+          <span class="muted small" id="durationInfo"></span>
+        </div>
+      </div>
+
+      <div class="step">
+        <h2>3. Teste o microfone</h2>
+        <p class="tip">🎧 Use fone de ouvido: assim o metrônomo não se mistura com o seu instrumento.</p>
+        <div class="mic-test">
+          <button class="btn-secondary" type="button" id="micTestButton">🎤 Testar microfone</button>
+          <div class="mic-status" id="micStatus" aria-live="polite">Toque uma nota para ver se ela é reconhecida.</div>
+          <div class="meter" aria-hidden="true"><div class="meter-bar" id="micMeter"></div></div>
+        </div>
+        <div class="alert" id="micError" role="alert" hidden></div>
+      </div>
+
+      <button class="btn-primary btn-start" type="button" id="startButton">Começar</button>
+    </div>
+
+    <!-- ===== Durante ===== -->
+    <div id="runView" hidden>
+      <div class="countdown" id="countdown" aria-live="assertive"></div>
+      <div class="chips chips--run" id="runChips" aria-label="Notas do exercício"></div>
+      <p class="muted center" id="runInfo"></p>
+      <div class="center"><button class="btn-secondary" type="button" id="stopButton">■ Parar</button></div>
+    </div>
+
+    <!-- ===== Analisando ===== -->
+    <div id="analyzingView" hidden>
+      <p class="center muted">Analisando sua execução…</p>
+    </div>
+
+    <!-- ===== Depois ===== -->
+    <div id="reportView" hidden>
+      <div class="score-grid">
+        <article class="score"><span>Notas certas</span><strong id="scoreCorrect"></strong><small id="scoreCorrectDetail"></small></article>
+        <article class="score score--alt"><span>No tempo</span><strong id="scoreOnTime"></strong><small id="scoreOnTimeDetail"></small></article>
+      </div>
+      <p class="main-tip" id="mainTip"></p>
+      <div class="notices" id="notices"></div>
+
+      <h2>Nota a nota</h2>
+      <div class="chips" id="reportChips"></div>
+      <ul class="legend" aria-label="Legenda">
+        <li><i class="dot dot--ok"></i>Certa e no tempo</li>
+        <li><i class="dot dot--octave"></i>Oitava diferente</li>
+        <li><i class="dot dot--timing"></i>Fora do tempo</li>
+        <li><i class="dot dot--wrong"></i>Errada</li>
+        <li><i class="dot dot--missing"></i>Faltou</li>
+      </ul>
+
+      <div id="problemsBlock">
+        <h2>O que melhorar</h2>
+        <ul class="problems" id="problems"></ul>
+      </div>
+
+      <div class="row actions">
+        <button class="btn-primary" type="button" id="retryButton">Tentar de novo</button>
+        <button class="btn-secondary" type="button" id="changeButton">Mudar dificuldade</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="session.js"></script>
+<script src="pitch.js"></script>
+<script src="exercise-score.js"></script>
+<script src="metronome.js"></script>
+<script src="practice.js"></script>
+</body>
+</html>

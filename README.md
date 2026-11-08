@@ -16,6 +16,8 @@ O projeto usa o Supabase para autenticação e dados. Antes de rodar qualquer co
    - `supabase/migrations/20261017000000_instruments_and_content_updates.sql`
    - `supabase/migrations/20261017000100_backfill_missing_profiles.sql`
    - `supabase/migrations/20261018000000_security_progress_and_admin.sql` (segurança, progresso/XP e gestão de usuários)
+   - `supabase/migrations/20261018000100_community.sql` e `supabase/migrations/20261019000100_community_hardening.sql` (comunidade)
+   - `supabase/migrations/20261107000000_lesson_exercises.sql` (exercícios com reconhecimento de áudio)
 
 3. (Opcional) Rode `supabase/seed.sql` para ter aulas de exemplo em todos os instrumentos.
 
@@ -33,7 +35,7 @@ O projeto usa o Supabase para autenticação e dados. Antes de rodar qualquer co
 python BackEnd/login.py
 ```
 
-Sobe em `http://localhost:8001` (abre direto no login), serve o frontend estático e expõe as rotas de API: `/register`, `/login`, `/logout`, `/recover`, `/password`, `/refresh`, `/me`, `/instruments`, `/profile/instrument`, `/homepage`, `/content/<id>/complete`, `/admin/content` (GET/POST, PATCH/DELETE em `/admin/content/<id>`), `/admin/teachers`, `/admin/users` e `/admin/users/<id>/role`. Limite de upload: 50 MB por arquivo (mude com `MAX_UPLOAD_MB` no `.env`, respeitando o limite do bucket no Supabase). Todas as rotas que leem ou gravam dados do usuário exigem `Authorization: Bearer <access_token>` — o backend nunca guarda a `service_role key`; ele repassa o token da própria pessoa autenticada, e o RLS do Supabase decide o que cada uma pode fazer.
+Sobe em `http://localhost:8001` (abre direto no login), serve o frontend estático e expõe as rotas de API: `/register`, `/login`, `/logout`, `/recover`, `/password`, `/refresh`, `/me`, `/instruments`, `/profile/instrument`, `/homepage`, `/content/<id>/complete`, `/admin/content` (GET/POST, PATCH/DELETE em `/admin/content/<id>`), `/content/<id>/exercise` (GET), `/admin/content/<id>/exercise` (PUT/DELETE), `/admin/teachers`, `/admin/users` e `/admin/users/<id>/role`. Limite de upload: 50 MB por arquivo (mude com `MAX_UPLOAD_MB` no `.env`, respeitando o limite do bucket no Supabase). Todas as rotas que leem ou gravam dados do usuário exigem `Authorization: Bearer <access_token>` — o backend nunca guarda a `service_role key`; ele repassa o token da própria pessoa autenticada, e o RLS do Supabase decide o que cada uma pode fazer.
 
 ## Frontend
 
@@ -43,6 +45,7 @@ Os scripts ficam em `FrontEnd/src` como TypeScript (sem bundler — cada arquivo
 npm install
 npm run build       # gera os .js
 npm run typecheck   # só verifica tipos, sem gerar arquivos
+npm test            # compila e roda os testes de detecção de notas e avaliação (node --test, sem dependências)
 ```
 
 ## Fluxo de cadastro e login
@@ -58,6 +61,20 @@ A home busca os conteúdos publicados (aulas, músicas e partituras) agrupados p
 ## Administração
 
 Acesse pelo login com uma conta `admin`/`teacher`. O painel publica, edita (inclusive como rascunho) e exclui aulas, músicas e partituras; arquivos vão para o bucket `lesson-assets` e são apagados junto com o conteúdo. O professor de cada conteúdo é escolhido numa lista de professores/admins cadastrados. Administradores também têm a aba **Usuários**, para promover alguém a professor ou admin sem SQL (ninguém pode alterar o próprio papel). Administradores e professores continuam com acesso à área do aluno, incluindo seleção de instrumento principal e registro de progresso. Todas essas regras são garantidas pelo banco (RLS + funções), não só pela tela: alunos não conseguem alterar papel, XP ou nível nem com chamadas diretas à API.
+
+## Aula com reconhecimento de áudio (versão de testes)
+
+Design completo em `docs/superpowers/specs/2026-11-07-aula-reconhecimento-audio-design.md`. Só no site (o app mostra a aula normalmente) e sem ligação com XP: nada da prática é salvo.
+
+- **Professor** (painel → formulário de *Aula*): marque **Exercício com reconhecimento de áudio**. Clique em **Analisar notas** para o site sugerir as notas a partir do arquivo da aula (ou de um áudio de referência, obrigatório quando a aula usa link do YouTube/Vimeo). Revise as fichas (clique troca a nota, `×` apaga, `+` insere; a ficha mostra o segundo em que a nota apareceu e faz a pré-visualização pular para lá), ou digite as notas no campo de texto, ex.: `C4 D4 E4 F4 G4 A4 B4 C5`. **▶ Ouvir** toca o gabarito a 60 BPM. Salvar a aula salva o gabarito; desmarcar a caixa remove o exercício. Não disponível para bateria e composição.
+- **Aluno**: no player da aula aparece **🎤 Praticar com microfone** (`practice.html?id=<aula>`). Escolha Fácil (60 BPM), Médio (120) ou Difícil (180), ouça o exemplo, teste o microfone e toque uma nota por clique depois da contagem de 4. O relatório mostra notas certas, no tempo, tendência de adiantar/atrasar, oitava diferente (não é erro), problemas nota a nota e uma dica.
+- A detecção (YIN) roda no navegador, em `FrontEnd/src/pitch.ts`; a avaliação em `exercise-score.ts`. Precisa de Chrome ou Firefox no computador, em `http://localhost` ou `https://` (o navegador só libera o microfone em página segura). Use fone de ouvido.
+
+### Teste rápido com a escala de dó maior
+
+1. Aplique a migration `20261107000000_lesson_exercises.sql` e rode `npm run build`.
+2. No painel, crie uma **Aula** de violão/guitarra/piano (arquivo ou link), marque o exercício e digite `C4 D4 E4 F4 G4 A4 B4 C5` (ou envie um áudio seu tocando a escala e clique em **Analisar notas**). Publique.
+3. Entre como aluno (ou use a área do aluno), abra a aula e clique em **Praticar com microfone**. Comece pelo Fácil. No violão/guitarra, o C4 é o Dó da 1ª casa da 2ª corda — se tocar a escala uma oitava abaixo (C3, 3ª casa da 5ª corda), o relatório só avisa da oitava.
 
 ## Comunidade
 
