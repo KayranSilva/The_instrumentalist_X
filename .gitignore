@@ -20,3 +20,6 @@ supabase/.temp/
 # Editor / SO
 .DS_Store
 Thumbs.db
+
+# Configurações da IDE
+.idea/
