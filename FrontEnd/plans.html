@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Instrumentalist — Planos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/home.css">
+<link rel="stylesheet" href="css/plans.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="home.html">
+      <span class="brand-mark">I</span>
+      <span class="brand-name">The Instrumentalist</span>
+    </a>
+
+    <nav class="nav-links" id="navLinks">
+      <a href="home.html#lessons">Aulas</a>
+      <a href="community.html">Comunidade</a>
+      <a href="profile.html">Meu perfil</a>
+      <a href="home.html#instruments">Instrumentos</a>
+      <a href="home.html#journey">Minha jornada</a>
+      <a href="plans.html" class="active" aria-current="page">Planos</a>
+      <a href="admin.html" class="nav-admin" id="navAdmin" hidden>Painel administrativo</a>
+    </nav>
+
+    <div class="topbar-actions">
+      <div class="user-menu-wrap">
+        <button class="user-chip" id="userChip" type="button" aria-expanded="false" aria-haspopup="menu">
+          <span class="avatar" id="userAvatar" aria-hidden="true"></span>
+          <span class="user-name" id="userName"></span>
+          <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="user-menu" id="userMenu" role="menu">
+          <div class="user-menu-head">
+            <b id="menuName"></b>
+            <span id="menuEmail"></span>
+          </div>
+          <a class="logout-button" href="admin.html" id="menuAdmin" role="menuitem" hidden>Painel administrativo</a>
+          <button class="logout-button logout-button--danger" id="logoutButton" type="button" role="menuitem">Sair da conta</button>
+        </div>
+      </div>
+      <button class="nav-toggle" id="navToggle" type="button" aria-label="Abrir menu" aria-expanded="false">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+  <section class="plans-hero">
+    <div class="plans-hero-inner">
+      <span class="kicker">Planos</span>
+      <h1>Escolha o plano ideal para você</h1>
+      <p>Compare os planos e escolha o que combina com você.</p>
+    </div>
+  </section>
+
+  <section class="section" id="plans">
+    <div class="section-head">
+      <div>
+        <h2>Planos disponíveis</h2>
+        <p>Escolha um plano e a forma de pagamento.</p>
+      </div>
+    </div>
+    <div class="plan-grid" id="planGrid" aria-live="polite">
+      <div class="plan-card skeleton" aria-hidden="true"></div><div class="plan-card skeleton" aria-hidden="true"></div><div class="plan-card skeleton" aria-hidden="true"></div>
+    </div>
+  </section>
+
+  <section class="section section--tinted" id="subscriptions">
+    <div class="section-head">
+      <div>
+        <h2>Minhas assinaturas</h2>
+        <p>Suas contratações, da mais recente para a mais antiga.</p>
+      </div>
+    </div>
+    <div class="history-list" id="subscriptionList"><p class="history-empty">Carregando…</p></div>
+  </section>
+
+  <section class="section" id="payments">
+    <div class="section-head">
+      <div>
+        <h2>Histórico de pagamentos</h2>
+        <p>Todos os seus pagamentos, do mais recente para o mais antigo.</p>
+      </div>
+    </div>
+    <div class="history-list" id="paymentList"><p class="history-empty">Carregando…</p></div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <a class="brand" href="home.html">
+      <span class="brand-mark brand-mark--sm">I</span>
+      <span class="brand-name brand-name--dark">The Instrumentalist</span>
+    </a>
+    <nav class="footer-links">
+      <a href="#lessons">Aulas</a>
+      <a href="community.html">Comunidade</a>
+      <a href="#instruments">Instrumentos</a>
+      <a href="#journey">Minha jornada</a>
+      <a href="plans.html">Planos</a>
+    </nav>
+    <span class="footer-copy" id="footerCopy">© The Instrumentalist</span>
+  </div>
+</footer>
+
+<!-- Pagamento -->
+<div class="overlay" id="checkoutOverlay" hidden>
+  <div class="dialog dialog--checkout" role="dialog" aria-modal="true" aria-labelledby="checkoutTitle">
+    <div class="dialog-head">
+      <div>
+        <span class="lesson-tag">Pagamento</span>
+        <h2 id="checkoutTitle">Contratar plano</h2>
+        <p class="dialog-meta" id="checkoutSummary"></p>
+      </div>
+      <button class="dialog-close" type="button" data-close aria-label="Fechar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+
+    <ol class="stepper" id="checkoutStepper" aria-label="Etapas do pagamento">
+      <li>Pagamento</li><li>Dados</li><li>Confirmação</li>
+    </ol>
+
+    <!-- Etapa 1: forma de pagamento -->
+    <section id="stepMethod">
+      <fieldset class="choice-group">
+        <legend>Como você quer pagar?</legend>
+        <label class="choice"><input type="radio" name="method" value="pix" checked><span><b>Pix</b><small>Código copia e cola e QR Code</small></span></label>
+        <label class="choice"><input type="radio" name="method" value="credit_card"><span><b>Cartão de crédito</b><small>Número, validade e código de segurança</small></span></label>
+      </fieldset>
+      <div class="dialog-actions">
+        <button class="link-btn" type="button" data-close>Cancelar</button>
+        <button class="btn-primary" id="methodContinue" type="button">Continuar</button>
+      </div>
+    </section>
+
+    <!-- Plano gratuito -->
+    <section id="stepFree" hidden>
+      <p class="free-note">Este plano é gratuito: não há forma de pagamento a escolher. Basta confirmar a ativação.</p>
+      <p class="form-error" id="freeError" role="alert"></p>
+      <div class="dialog-actions">
+        <button class="link-btn" type="button" data-close>Cancelar</button>
+        <button class="btn-primary" id="freeConfirm" type="button">Ativar plano</button>
+      </div>
+    </section>
+
+    <!-- Etapa 2a: cartão -->
+    <form id="cardForm" autocomplete="off" novalidate hidden>
+      <div class="pay-field">
+        <label for="cardNumber">Número do cartão <em id="cardBrand"></em></label>
+        <input id="cardNumber" type="text" inputmode="numeric" autocomplete="off" placeholder="0000 0000 0000 0000" maxlength="23">
+        <small class="field-error" id="cardNumberError"></small>
+      </div>
+      <div class="pay-field">
+        <label for="cardName">Nome impresso no cartão</label>
+        <input id="cardName" type="text" autocomplete="off" placeholder="COMO ESTÁ NO CARTÃO" maxlength="60">
+        <small class="field-error" id="cardNameError"></small>
+      </div>
+      <div class="pay-row">
+        <div class="pay-field">
+          <label for="cardExpiry">Validade</label>
+          <input id="cardExpiry" type="text" inputmode="numeric" autocomplete="off" placeholder="MM/AA" maxlength="5">
+          <small class="field-error" id="cardExpiryError"></small>
+        </div>
+        <div class="pay-field">
+          <label for="cardCvv">Código (CVV)</label>
+          <input id="cardCvv" type="text" inputmode="numeric" autocomplete="off" placeholder="123" maxlength="4">
+          <small class="field-error" id="cardCvvError"></small>
+        </div>
+      </div>
+
+      <p class="form-error" id="cardError" role="alert"></p>
+      <div class="dialog-actions">
+        <button class="link-btn" type="button" id="cardBack">Voltar</button>
+        <button class="btn-primary" id="cardSubmit" type="submit">Pagar</button>
+      </div>
+    </form>
+
+    <!-- Etapa 2b: Pix -->
+    <section id="stepPix" hidden>
+      <div class="pix-box">
+        <div class="pix-qr" id="pixQr"></div>
+        <div class="pix-info">
+          <p class="pix-amount" id="pixAmount"></p>
+          <p class="pix-timer" id="pixTimer" aria-live="off"></p>
+          <p class="pix-hint">Abra o app do seu banco, escolha pagar com Pix e, quando terminar, confirme aqui.</p>
+        </div>
+      </div>
+      <div class="pix-copy">
+        <label for="pixCode">Pix copia e cola</label>
+        <div class="pix-copy-row">
+          <input id="pixCode" type="text" readonly>
+          <button class="ghost-copy" id="pixCopy" type="button">Copiar</button>
+        </div>
+      </div>
+      <p class="pix-expired" id="pixExpired" role="alert" hidden>Este código expirou. Gere um novo para continuar.</p>
+      <p class="form-error" id="pixError" role="alert"></p>
+      <div class="dialog-actions dialog-actions--wrap">
+        <button class="link-btn" type="button" id="pixBack">Voltar</button>
+        <button class="link-btn link-btn--danger" type="button" id="pixCancel">Cancelar pagamento</button>
+        <button class="btn-primary" type="button" id="pixRenew" hidden>Gerar novo código</button>
+        <button class="btn-primary" type="button" id="pixPay">Já fiz o pagamento</button>
+      </div>
+    </section>
+
+    <!-- Etapa 3: processamento -->
+    <section id="stepProcessing" class="processing" hidden aria-live="polite">
+      <span class="spinner" aria-hidden="true"></span>
+      <h3>Processando pagamento…</h3>
+      <ul class="processing-list" id="processingList"></ul>
+      <p class="processing-note">Não feche esta janela.</p>
+    </section>
+
+    <!-- Etapa 3: resultado -->
+    <div class="result-box" id="checkoutResult" hidden>
+      <div class="result-head"><span class="result-icon" id="resultIcon" aria-hidden="true"></span><h3 id="resultTitle"></h3></div>
+      <dl class="result-list" id="resultList"></dl>
+      <p class="result-reason" id="resultReason" hidden></p>
+      <p class="result-note" id="resultNote"></p>
+      <div class="dialog-actions dialog-actions--wrap">
+        <a class="link-btn" href="#subscriptions" data-close>Ver minhas assinaturas</a>
+        <button class="link-btn" id="resultRetry" type="button" hidden>Tentar novamente</button>
+        <button class="btn-primary" id="resultDone" type="button" data-close>Concluir</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Cancelar assinatura -->
+<div class="overlay" id="cancelOverlay" hidden>
+  <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="cancelTitle" aria-describedby="cancelText">
+    <div class="dialog-head">
+      <div>
+        <h2 id="cancelTitle">Cancelar assinatura?</h2>
+        <p class="dialog-meta" id="cancelSummary"></p>
+      </div>
+      <button class="dialog-close" type="button" id="cancelClose" aria-label="Fechar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <p class="cancel-text" id="cancelText"></p>
+    <p class="form-error" id="cancelError" role="alert"></p>
+    <div class="dialog-actions">
+      <button class="link-btn" type="button" id="cancelKeep">Manter assinatura</button>
+      <button class="btn-primary btn-primary--danger" type="button" id="cancelConfirm">Cancelar assinatura</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="js/session.js"></script>
+<script src="js/plans.js"></script>
+</body>
+</html>

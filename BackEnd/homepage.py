@@ -1,136 +1,152 @@
-from typing import Any, Dict, List
+from typing import Any, Dict
+
+import supabase_client
+from content import TYPE_DB_TO_UI, describe_media, level_label, seconds_to_duration
+from exercise import exercise_ids
+from supabase_client import SupabaseError
+
+XP_PER_LEVEL = 100
 
 
-def get_homepage_data(email: str = "marina@theinstrumentalist.com") -> Dict[str, Any]:
-    """Retorna os dados dinâmicos da homepage do usuário."""
-    normalized_email = (email or "").strip().lower() or "marina@theinstrumentalist.com"
+def _empty_journey() -> Dict[str, Any]:
+    return {"streak": 0, "xp_month": 0, "week": [False] * 7, "completed_ids": [], "badges": [], "ranking": []}
 
-    user_name = "Marina"
-    if normalized_email == "admin@theinstrumentalist.com":
-        user_name = "Administrador"
-    elif normalized_email != "marina@theinstrumentalist.com":
-        user_name = normalized_email.split("@")[0].capitalize()
 
-    continue_lesson = {
-        "instrument": "Violão",
-        "module": "Módulo 3",
-        "title": "Dedilhado com métrica 6/8",
-        "progress": 64,
-        "time_remaining": "8 min restantes",
-    }
+def get_homepage_data(token: str) -> Dict[str, Any]:
+    """Monta a homepage do usuário autenticado a partir do Supabase.
 
-    lessons: List[Dict[str, Any]] = [
+    O primeiro grupo de conteúdos é o do instrumento principal escolhido no
+    cadastro (profile_instruments.is_primary); os demais instrumentos com
+    conteúdo aparecem depois, em ordem alfabética.
+    """
+    try:
+        user = supabase_client.get_auth_user(token)
+        user_id = user["id"]
+        email = (user.get("email") or "").strip().lower()
+
+        profiles = supabase_client.rest_select(
+            "profiles", token, {"select": "display_name,role,xp_total,level", "id": f"eq.{user_id}"}
+        )
+        profile = profiles[0] if profiles else {}
+
+        profile_instruments = supabase_client.rest_select(
+            "profile_instruments",
+            token,
+            {"select": "instrument_id,is_primary,instruments(slug)", "profile_id": f"eq.{user_id}"},
+        )
+
+        content_items = supabase_client.rest_select(
+            "content_items",
+            token,
+            {
+                "select": "id,type,title,description,instructor_name,duration_seconds,level,external_url,"
+                          "instrument_id,instruments(name,slug)",
+                "published": "eq.true",
+                "order": "created_at.desc",
+            },
+        )
+
+        instruments_catalog = supabase_client.rest_select(
+            "instruments", token, {"select": "id,name,slug", "order": "name.asc"}
+        )
+    except SupabaseError as error:
+        return {"success": False, "message": error.message, "status": error.status}
+
+    try:
+        journey = supabase_client.rpc("get_my_journey", token) or _empty_journey()
+    except SupabaseError:
+        # A home continua funcionando mesmo se a migration de progresso
+        # ainda não tiver sido aplicada.
+        journey = _empty_journey()
+
+    with_exercise = exercise_ids(token)
+
+    display_name = profile.get("display_name") or (email.split("@")[0].capitalize() if email else "Aluno")
+    primary_entry = next((pi for pi in profile_instruments if pi.get("is_primary")), None)
+    primary_instrument_id = primary_entry.get("instrument_id") if primary_entry else None
+    primary_slug = ((primary_entry or {}).get("instruments") or {}).get("slug", "")
+    completed_ids = set(journey.get("completed_ids") or [])
+
+    groups: Dict[str, Dict[str, Any]] = {}
+    for item in content_items:
+        instrument = item.get("instruments") or {}
+        slug = instrument.get("slug") or "outros"
+        group = groups.setdefault(slug, {
+            "instrument_slug": slug,
+            "instrument_name": instrument.get("name") or "Outros",
+            "is_primary": bool(primary_instrument_id) and item.get("instrument_id") == primary_instrument_id,
+            "lessons": [],
+        })
+        media = describe_media(item.get("external_url") or "")
+        group["lessons"].append({
+            "id": item["id"],
+            "type": TYPE_DB_TO_UI.get(item.get("type"), "aula"),
+            "title": item.get("title") or "",
+            "description": item.get("description") or "",
+            "teacher": item.get("instructor_name") or "",
+            "duration": seconds_to_duration(item.get("duration_seconds")),
+            "level": level_label(item.get("level")),
+            "media_kind": media["kind"],
+            "media_url": media["embed_url"],
+            "completed": item["id"] in completed_ids,
+            "has_exercise": item["id"] in with_exercise,
+        })
+
+    lesson_groups = sorted(
+        groups.values(), key=lambda group: (0 if group["is_primary"] else 1, group["instrument_name"])
+    )
+    total_items = sum(len(group["lessons"]) for group in lesson_groups)
+
+    content_counts = {group["instrument_slug"]: len(group["lessons"]) for group in lesson_groups}
+    instruments_payload = [
         {
-            "id": 1,
-            "instrument": "violao",
-            "title": "Dedilhado com métrica 6/8",
-            "teacher": "Rafael Nunes",
-            "duration": "14:20",
-            "progress": 64,
-            "badge": None,
-        },
-        {
-            "id": 2,
-            "instrument": "piano",
-            "title": "Acordes de sétima na prática",
-            "teacher": "Bianca Rocha",
-            "duration": "09:45",
-            "progress": 20,
-            "badge": None,
-        },
-        {
-            "id": 3,
-            "instrument": "bateria",
-            "title": "Groove básico de samba",
-            "teacher": "Diego Alves",
-            "duration": "11:10",
-            "progress": 0,
-            "badge": "Novo",
-        },
-        {
-            "id": 4,
-            "instrument": "canto",
-            "title": "Respiração e apoio vocal",
-            "teacher": "Aline Souza",
-            "duration": "07:30",
-            "progress": 100,
-            "badge": None,
-        },
-        {
-            "id": 5,
-            "instrument": "violao",
-            "title": "Trocas de acordes sem travar",
-            "teacher": "Rafael Nunes",
-            "duration": "13:05",
-            "progress": 0,
-            "badge": None,
-        },
-        {
-            "id": 6,
-            "instrument": "piano",
-            "title": "Leitura de partitura para iniciantes",
-            "teacher": "Bianca Rocha",
-            "duration": "16:50",
-            "progress": 0,
-            "badge": None,
-        },
+            "name": inst.get("name", ""),
+            "slug": inst.get("slug", ""),
+            "is_primary": inst.get("id") == primary_instrument_id,
+            "content_count": content_counts.get(inst.get("slug", ""), 0),
+        }
+        for inst in instruments_catalog
     ]
 
-    instruments: List[Dict[str, Any]] = [
-        {"name": "Violão", "meta": "32 aulas · Iniciante", "icon": "violao"},
-        {"name": "Piano", "meta": "28 aulas · Intermediário", "icon": "piano"},
-        {"name": "Bateria", "meta": "19 aulas · Iniciante", "icon": "bateria"},
-        {"name": "Violino", "meta": "15 aulas · Avançado", "icon": "violino"},
-        {"name": "Ukulele", "meta": "11 aulas · Iniciante", "icon": "ukulele"},
-        {"name": "Canto", "meta": "21 aulas · Todos os níveis", "icon": "canto"},
-    ]
-
-    journey = {
-        "level": 7,
-        "xp_current": 1240,
-        "xp_goal": 1620,
-        "xp_needed": 380,
-        "progress": 72,
-        "streak": 12,
-        "weekly_sequence": [True, True, True, True, True, False, False],
-        "badges": [
-            {"name": "Primeira aula", "unlocked": True},
-            {"name": "7 dias seguidos", "unlocked": True},
-            {"name": "30 dias seguidos", "unlocked": False},
-            {"name": "3 instrumentos", "unlocked": False},
-        ],
-        "ranking": [
-            {"rank": 1, "name": "Camila R.", "xp": 2180, "avatar": "C"},
-            {"rank": 2, "name": "Marina (você)", "xp": 1240, "avatar": "M", "is_you": True},
-            {"rank": 3, "name": "Thiago M.", "xp": 1080, "avatar": "T"},
-        ],
-    }
-
-    stats = [
-        {"label": "dias seguidos", "value": "12", "icon": "flame"},
-        {"label": "XP este mês", "value": "1.240", "icon": "star"},
-        {"label": "Nível", "value": "7", "icon": "medal"},
-    ]
+    xp_total = int(profile.get("xp_total") or 0)
+    level = int(profile.get("level") or 1)
+    xp_in_level = xp_total - (level - 1) * XP_PER_LEVEL
+    xp_in_level = max(0, min(xp_in_level, XP_PER_LEVEL))
 
     return {
         "success": True,
-        "message": "Homepage carregada com sucesso.",
         "user": {
-            "email": normalized_email,
-            "name": user_name,
+            "email": email,
+            "name": display_name,
+            "role": profile.get("role") or "student",
+            "primary_instrument": primary_slug,
         },
-        "hero": {
-            "welcome": "Bem-vindo de volta",
-            "greeting": f"Boa noite, {user_name}.",
-            "message": "Você está a duas lições de completar o módulo de Violão Popular. Bora continuar de onde parou?",
-            "continue_lesson": continue_lesson,
-            "stats": stats,
-        },
-        "lessons": lessons,
-        "instruments": instruments,
-        "journey": journey,
-        "community": {
-            "title": "Aprenda em boa companhia",
-            "description": "Participe do desafio do mês, compartilhe suas gravações e receba retorno de outros alunos e professores.",
+        "lesson_groups": lesson_groups,
+        "instruments": instruments_payload,
+        "journey": {
+            "level": level,
+            "xp_total": xp_total,
+            "xp_month": int(journey.get("xp_month") or 0),
+            "xp_in_level": xp_in_level,
+            "xp_per_level": XP_PER_LEVEL,
+            "streak": int(journey.get("streak") or 0),
+            "weekly_sequence": list(journey.get("week") or [False] * 7),
+            "badges": journey.get("badges") or [],
+            "ranking": journey.get("ranking") or [],
+            "completed_count": sum(1 for group in lesson_groups for lesson in group["lessons"] if lesson["completed"]),
+            "total_count": total_items,
         },
     }
+
+
+def complete_content(token: str, content_id: str) -> Dict[str, Any]:
+    try:
+        result = supabase_client.rpc("complete_content", token, {"p_content_id": content_id})
+    except SupabaseError as error:
+        return {"success": False, "message": error.message, "status": error.status}
+    result = result if isinstance(result, dict) else {}
+    if result.get("already_completed"):
+        message = "Você já tinha concluído este conteúdo."
+    else:
+        message = f"+{result.get('xp_awarded', 0)} XP! Conteúdo concluído."
+    return {"success": True, "message": message, **result}
