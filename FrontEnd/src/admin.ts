@@ -94,12 +94,15 @@
   // ---------- Navegação entre telas ----------
   function showView(): void {
     const wantsUsers = window.location.hash === "#usuarios";
-    if (wantsUsers && !isAdmin()) { history.replaceState(null, "", "#conteudos"); }
-    const view = wantsUsers && isAdmin() ? "users" : "content";
+    const wantsPlans = window.location.hash === "#planos";
+    if ((wantsUsers || wantsPlans) && !isAdmin()) { history.replaceState(null, "", "#conteudos"); }
+    const view = wantsUsers && isAdmin() ? "users" : wantsPlans && isAdmin() ? "plans" : "content";
     $("contentView").hidden = view !== "content";
     $("usersView").hidden = view !== "users";
+    $("plansView").hidden = view !== "plans";
     document.querySelectorAll<HTMLElement>(".nav-item[data-view]").forEach((item) => item.classList.toggle("active", item.dataset.view === view));
     if (view === "users" && !users.length) loadUsers();
+    if (view === "plans") AdminPlans.load();
   }
   window.addEventListener("hashchange", showView);
 
@@ -770,6 +773,7 @@
     $("adminIdentity").textContent = me.name || me.email;
     $("adminRole").textContent = ROLE_LABEL[me.role || ""] || "";
     $("navUsers").hidden = !isAdmin();
+    $("navPlans").hidden = !isAdmin();
   }
 
   $("logoutButton").addEventListener("click", () => { AppSession.logout(); });

@@ -80,3 +80,17 @@
 .note-editor{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:-4px 0 12px;padding:9px 10px;border-radius:6px;background:#f4f1fb;font-size:12px}
 .note-editor select{padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--white);font-size:12px}
 .exercise-pill{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:20px;background:#e8defb;color:var(--green);font-size:10px;font-weight:700;vertical-align:middle}
+
+/* ===== Planos e pagamentos simulados ===== */
+.content-symbol.plan{font:700 13px "DM Sans",sans-serif}
+.content-symbol.plan.is-off{background:#f0edf6;color:#9b91ad}
+.hint-line{margin:0 0 6px;color:var(--muted);font-size:12px;line-height:1.5}
+.plans-history{margin-top:25px}
+.plan-tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);padding-bottom:13px;margin-bottom:8px}
+.plan-tab{border:0;background:transparent;color:var(--muted);border-radius:5px;padding:7px 11px;font-size:12px;font-weight:600}
+.plan-tab.active{background:var(--white);color:var(--green);box-shadow:0 1px 3px #2415460d}
+.users-table small.muted{color:var(--muted);font-size:11px}
+.status-pill{display:inline-block;padding:3px 9px;border-radius:20px;background:#f4f1fb;color:var(--muted);font-size:11px;font-weight:700;white-space:nowrap}
+.status-pill--ok{background:#dff3ea;color:#1f6b4f}
+.status-pill--warn{background:#f4edc9;color:#7a5b00}
+.status-pill--bad{background:#f9e1dc;color:#8f2a2a}

@@ -18,6 +18,8 @@ O projeto usa o Supabase para autenticação e dados. Antes de rodar qualquer co
    - `supabase/migrations/20261018000000_security_progress_and_admin.sql` (segurança, progresso/XP e gestão de usuários)
    - `supabase/migrations/20261018000100_community.sql` e `supabase/migrations/20261019000100_community_hardening.sql` (comunidade)
    - `supabase/migrations/20261107000000_lesson_exercises.sql` (exercícios com reconhecimento de áudio)
+   - `20261108000000_plans_and_simulated_payments.sql`
+   - `20261108000100_cancel_subscription.sql`
 
 3. (Opcional) Rode `supabase/seed.sql` para ter aulas de exemplo em todos os instrumentos.
 
