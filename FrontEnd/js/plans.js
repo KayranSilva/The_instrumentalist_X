@@ -19,7 +19,7 @@
         canceled: "Pagamento cancelado",
     };
     const RESULT_NOTE = {
-        approved: "Sua assinatura está ativa. Lembrete: suas aulas continuam liberadas com ou sem assinatura.",
+        approved: "Sua assinatura está ativa.",
         rejected: "Nenhuma assinatura foi ativada. Você pode tentar de novo quando quiser.",
         pending: "A assinatura será ativada assim que o pagamento for confirmado.",
         canceled: "Nenhuma assinatura foi ativada.",

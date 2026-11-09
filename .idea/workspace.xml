@@ -5,31 +5,39 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d6387627-4271-46e4-8da4-a967fd41d675" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/BackEnd/plans.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/FrontEnd/admin-plans.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/FrontEnd/plans.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/FrontEnd/plans.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/FrontEnd/plans.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/FrontEnd/src/admin-plans.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/FrontEnd/src/plans.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/supabase/migrations/20261108000000_plans_and_simulated_payments.sql" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/supabase/migrations/20261108000100_cancel_subscription.sql" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BackEnd/login.py" beforeDir="false" afterPath="$PROJECT_DIR$/BackEnd/login.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BackEnd/supabase_client.py" beforeDir="false" afterPath="$PROJECT_DIR$/BackEnd/supabase_client.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FrontEnd/admin.css" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/admin.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/superpowers/.gitkeep" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/admin-plans.js" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/js/admin-plans.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/admin.css" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/css/admin.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/FrontEnd/admin.html" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/admin.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FrontEnd/admin.js" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/admin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FrontEnd/exercise-score.js" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/exercise-score.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/admin.js" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/js/admin.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/community-theme.css" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/css/community-theme.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/community.css" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/css/community.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/community.html" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/community.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/community.js" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/js/community.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/exercise-score.js" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/js/exercise-score.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/home.css" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/css/home.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/FrontEnd/home.html" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/home.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FrontEnd/home.js" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/home.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FrontEnd/metronome.js" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/metronome.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FrontEnd/pitch.js" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/pitch.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FrontEnd/practice.js" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/practice.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FrontEnd/register.js" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/register.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FrontEnd/reset.js" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/reset.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FrontEnd/script.js" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/script.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FrontEnd/session.js" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/session.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FrontEnd/src/admin.ts" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/src/admin.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/home.js" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/js/home.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/login.html" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/login.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/metronome.js" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/js/metronome.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/pitch.js" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/js/pitch.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/plans.css" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/css/plans.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/plans.html" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/plans.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/plans.js" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/js/plans.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/practice.css" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/css/practice.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/practice.html" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/practice.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/practice.js" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/js/practice.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/profile.html" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/profile.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/profile.js" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/js/profile.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/register.html" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/register.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/register.js" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/js/register.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/reset.html" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/reset.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/reset.js" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/js/reset.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/script.js" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/js/script.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/session.js" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/js/session.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/css/style.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -54,7 +62,7 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "develop",
+    "git-widget-placeholder": "feature/planos-assinaturas",
     "last_opened_file_path": "C:/Users/moura/The_instrumentalist_X/FrontEnd",
     "settings.editor.selected.configurable": "reference.settingsdialog.IDE.editor.colors"
   }
@@ -67,7 +75,11 @@
       <recent name="C:\Users\moura\The_instrumentalist_X\supabase\migrations" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\moura\The_instrumentalist_X\FrontEnd" />
+      <recent name="C:\Users\moura\The_instrumentalist_X\FrontEnd\js" />
+      <recent name="C:\Users\moura\The_instrumentalist_X\FrontEnd\css" />
       <recent name="C:\Users\moura\The_instrumentalist_X\FrontEnd\src" />
+      <recent name="C:\Users\moura\The_instrumentalist_X\FrontEnd\images" />
     </key>
   </component>
   <component name="SharedIndexes">
