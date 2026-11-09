@@ -200,6 +200,34 @@ def save_exercise(
     return {"success": True, "message": f"Gabarito salvo ({len(notes or [])} notas)."}, 200
 
 
+def record_practice(token: str, content_id: str, payload: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
+    """Registra uma sessão concluída; o banco calcula e limita o XP."""
+    if not is_uuid(content_id):
+        return {"success": False, "message": "Exercício não encontrado."}, 404
+
+    duration = payload.get("duration_seconds")
+    accuracy = payload.get("accuracy_percent")
+    on_time = payload.get("on_time_percent")
+    if any(type(value) is not int for value in (duration, accuracy, on_time)):
+        return {"success": False, "message": "Dados da prática inválidos."}, 400
+    if not 0 <= duration <= 3600 or not 0 <= accuracy <= 100 or not 0 <= on_time <= 100:
+        return {"success": False, "message": "Dados da prática fora do intervalo permitido."}, 400
+
+    try:
+        result = supabase_client.rpc("award_practice_xp", token, {
+            "p_content_id": content_id,
+            "p_duration_seconds": duration,
+            "p_accuracy_percent": accuracy,
+            "p_on_time_percent": on_time,
+        })
+    except SupabaseError as error:
+        return _friendly_error(error, "Não foi possível registrar sua prática.")
+
+    if not isinstance(result, dict):
+        return {"success": False, "message": "Resposta inválida ao registrar a prática."}, 502
+    return {"success": True, **result}, 200
+
+
 def delete_exercise(token: str, content_id: str) -> Tuple[Dict[str, Any], int]:
     if not is_uuid(content_id):
         return {"success": False, "message": "Aula não encontrada."}, 404

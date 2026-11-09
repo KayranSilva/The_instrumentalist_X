@@ -13,7 +13,7 @@ from urllib.request import Request, urlopen
 
 import supabase_client
 from content import MAX_UPLOAD_MB, create_content, delete_content, is_uuid, list_content, list_teachers, update_content
-from exercise import delete_exercise, get_exercise, save_exercise
+from exercise import delete_exercise, get_exercise, record_practice, save_exercise
 from homepage import complete_content, get_homepage_data
 import community as community_api
 import plans as plans_api
@@ -648,6 +648,9 @@ class LoginRequestHandler(BaseHTTPRequestHandler):
             status = 200 if response.get("success") else int(response.pop("status", 500) or 500)
         elif route == "/profile/instrument":
             response, status = set_primary_instrument(token, payload.get("instrument_slug", ""))
+        elif route.startswith("/content/") and route.endswith("/practice"):
+            content_id = route[len("/content/"):-len("/practice")]
+            response, status = record_practice(token, content_id, payload)
         elif route.startswith("/content/") and route.endswith("/complete"):
             content_id = route[len("/content/"):-len("/complete")]
             if not is_uuid(content_id):

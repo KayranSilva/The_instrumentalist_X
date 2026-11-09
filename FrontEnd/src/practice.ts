@@ -7,6 +7,7 @@
     instrument_slug: string;
     instrument_name: string;
   };
+  type PracticeAwardResponse = { eligible: boolean; xp_awarded: number; already_awarded: boolean; message: string; xp_total?: number; level?: number };
   type Chunk = { time: number; samples: Float32Array };
   type Recorder = { stop(): void; chunks: Chunk[] };
 
@@ -332,8 +333,9 @@
 
   async function finish(): Promise<void> {
     if (!running || !ctx || !exercise || !range) return;
-    const { start, clickTimes, recorder } = running;
+    const { start, end, clickTimes, recorder } = running;
     const stoppedEarly = ctx.currentTime < start;
+    const activeSeconds = Math.max(0, Math.floor(Math.min(ctx.currentTime, end) - start));
     running = null;
     window.cancelAnimationFrame(animation);
     scheduler?.stopAll();
@@ -350,14 +352,14 @@
       .map((note) => ({ ...note, time: note.time + recording.start - latency }))
       // Clique do metrônomo vazando no microfone: curto e logo após um clique.
       .filter((note) => !(note.duration < 0.08 && clickTimes.some((click) => note.time - click >= 0 && note.time - click <= 0.04)));
-    renderReport(scoreAttempt(exercise.notes, played, difficulty.bpm, start));
+    await renderReport(scoreAttempt(exercise.notes, played, difficulty.bpm, start), activeSeconds);
   }
 
   $("startButton").addEventListener("click", () => { begin(); });
   $("stopButton").addEventListener("click", () => { finish(); });
 
   // ---------- Relatório ----------
-  function renderReport(report: AttemptReport): void {
+  async function renderReport(report: AttemptReport, activeSeconds: number): Promise<void> {
     $("scoreCorrect").textContent = `${report.correctPercent}%`;
     $("scoreCorrectDetail").textContent = `${report.correct} de ${report.total} notas`;
     $("scoreOnTime").textContent = report.correct ? `${report.onTimePercent}%` : "—";
@@ -369,6 +371,7 @@
     if (report.tendencyMessage) notices.push(`<p class="notice">⏱ ${esc(report.tendencyMessage)}</p>`);
     if (report.extras) notices.push(`<p class="notice">➕ ${report.extras} ${report.extras === 1 ? "nota a mais" : "notas a mais"} do que o exercício pede.</p>`);
     report.octaveNotes.forEach((note) => notices.push(`<p class="notice notice--octave">${esc(note)}</p>`));
+    notices.push('<p class="notice practice-award" id="practiceAward" role="status">Registrando sua prática…</p>');
     $("notices").innerHTML = notices.join("");
 
     $("reportChips").innerHTML = report.results.map((result) => {
@@ -382,6 +385,24 @@
     $("problemsBlock").hidden = !report.problems.length;
     $("problems").innerHTML = report.problems.map((problem) => `<li>${esc(problem)}</li>`).join("");
     show("report");
+
+    const awardStatus = $("practiceAward");
+    try {
+      const award = await AppSession.api<PracticeAwardResponse>(`/content/${encodeURIComponent(contentId)}/practice`, {
+        method: "POST",
+        json: {
+          duration_seconds: activeSeconds,
+          accuracy_percent: report.correctPercent,
+          on_time_percent: report.onTimePercent,
+        },
+      });
+      awardStatus.textContent = award.message;
+      awardStatus.classList.toggle("is-success", award.xp_awarded > 0);
+    } catch (error) {
+      if (error instanceof AppApiError && error.status === 401) return;
+      awardStatus.textContent = "Seu relatório está pronto, mas não foi possível registrar o XP. Tente novamente mais tarde.";
+      awardStatus.classList.add("is-error");
+    }
   }
 
   $("retryButton").addEventListener("click", () => { begin(); });
@@ -412,7 +433,7 @@
     document.title = `The Instrumentalist — Praticar: ${exercise.title}`;
     $("exerciseTitle").textContent = exercise.title;
     $("exerciseKicker").textContent = `Praticar com microfone · ${exercise.instrument_name}`;
-    $("exerciseMeta").textContent = "Toque uma nota por clique do metrônomo. No final você recebe um relatório do que acertou e do que precisa melhorar. Nada é salvo.";
+    $("exerciseMeta").textContent = "Toque uma nota por clique do metrônomo. No final, veja seu relatório e ganhe XP pela prática válida. O áudio não é enviado nem armazenado.";
     $("setupChips").innerHTML = chipsHtml(exercise.notes);
     renderDifficulty();
     $("loadingView").hidden = true;

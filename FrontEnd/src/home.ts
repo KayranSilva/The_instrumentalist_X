@@ -284,7 +284,7 @@
 
     setText("levelNumber", String(journey.level));
     setText("levelTitle", levelTitle(journey.level));
-    setText("levelMessage", `Faltam ${missing} XP para o nível ${journey.level + 1}. Cada conteúdo concluído vale 20 XP.`);
+    setText("levelMessage", `Faltam ${missing} XP para o nível ${journey.level + 1}. Conteúdo concluído: +20 XP; prática válida: +5 XP e até +3 XP de bônus.`);
     setText("levelLabel", `${journey.xp_in_level} / ${journey.xp_per_level} XP · ${journey.xp_total.toLocaleString("pt-BR")} XP no total`);
     $("levelRing")?.style.setProperty("--ring", String(percent));
     const bar = $("levelProgress");
@@ -299,8 +299,8 @@
     setText("streakNote", journey.streak
       ? practicedToday
         ? `Você está há ${journey.streak} ${journey.streak === 1 ? "dia" : "dias"} seguidos praticando. Continue amanhã!`
-        : `Conclua uma aula hoje para manter seus ${journey.streak} ${journey.streak === 1 ? "dia" : "dias"} seguidos.`
-      : "Conclua uma aula hoje para começar sua sequência.");
+        : `Conclua uma aula ou prática válida hoje para manter seus ${journey.streak} ${journey.streak === 1 ? "dia" : "dias"} seguidos.`
+      : "Conclua uma aula ou prática válida hoje para começar sua sequência.");
 
     const badges = $("badgesGrid");
     if (badges) {
@@ -320,7 +320,7 @@
           + `<span class="avatar avatar--sm" aria-hidden="true">${esc(AppSession.initial(entry.name))}</span>`
           + `<span class="lb-name">${esc(entry.name)}${entry.is_you ? " (você)" : ""}</span>`
           + `<span class="lb-xp">${entry.xp.toLocaleString("pt-BR")} XP</span></li>`).join("")
-        : '<li class="leaderboard-empty">Conclua aulas para aparecer no ranking.</li>';
+        : '<li class="leaderboard-empty">Conclua aulas ou práticas para aparecer no ranking.</li>';
     }
   }
 
